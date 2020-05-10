@@ -13,7 +13,7 @@ exports.signup = async (req, res, next) => {
     const hashedPw = await bcrypt.hash(password, 12);
 
     const user = new User({
-      _id: "5eb41e8ecc207a08995b43c1",
+      // _id: "5eb41e8ecc207a08995b43c1",
       email: email,
       password: hashedPw,
     });

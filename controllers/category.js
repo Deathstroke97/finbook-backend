@@ -4,10 +4,12 @@ const Business = require("../models/business");
 exports.getCategories = async (req, res, next) => {
   const businessId = req.body.businessId;
   try {
-    const categories = await Category.find({ business: businessId }).toArray();
+    const categories = await Category.find({
+      business: businessId,
+    });
     res.status(200).json({
       message: "Categories fetched successfully",
-      categories,
+      categories: categories,
     });
   } catch (error) {
     if (!error.statusCode) {
@@ -21,14 +23,16 @@ exports.postCategory = async (req, res, next) => {
   const id = req.body.id;
   const isDeleted = req.body.isDeleted;
   const { name, isOwnerTransfer, kind, type, businessId } = req.body;
-  const business = await Business.findById(businessId);
   try {
     if (id) {
       const category = await Category.findById(id);
+      if (!category) {
+        const error = new Error("Could not find requested category.");
+        error.statusCode = 404;
+        throw error;
+      }
       if (isDeleted) {
         await Category.findByIdAndRemove(id);
-        business.categories.pull(id);
-        await business.save();
         res.status(200).json({
           message: "Category deleted.",
           category: category,
@@ -53,8 +57,7 @@ exports.postCategory = async (req, res, next) => {
         business: businessId,
       });
       await newCategory.save();
-      business.categories.push(newCategory);
-      await business.save();
+
       res.status(201).json({
         message: "Category created.",
         newCategory: newCategory,

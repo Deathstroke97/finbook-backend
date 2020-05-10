@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
+
 const Schema = mongoose.Schema;
 
-const projectSchema = new Schema(
+const contractorSchema = new Schema(
   {
     name: {
       type: String,
@@ -12,15 +13,13 @@ const projectSchema = new Schema(
       ref: "Business",
       required: true,
     },
-    isFinished: {
-      type: Boolean,
-      default: false,
-    },
+    contactPerson: String,
+    phoneNumber: String,
+    email: String,
     description: String,
-    planIncome: Schema.Types.Decimal128,
-    planOutcome: Schema.Types.Decimal128,
+    balance: Schema.Types.Decimal128,
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Project", projectSchema);
+module.exports = mongoose.model("Contractor", contractorSchema);
