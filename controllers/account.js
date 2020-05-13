@@ -31,7 +31,8 @@ exports.createAccount = async (req, res, next) => {
     currency,
     number,
     bankName,
-    initialAmount,
+    amount: initialAmount,
+    initialAmount: initialAmount,
     initialAmountDate,
     business: businessId,
   });
@@ -51,7 +52,7 @@ exports.createAccount = async (req, res, next) => {
 
 exports.updateAccount = async (req, res, next) => {
   const accountId = req.params.accountId;
-  const { name, currency, number, bankName, initialAmount } = req.body;
+  const { name, currency, number, bankName, amount } = req.body;
 
   try {
     const account = await Account.findById(accountId);
@@ -64,7 +65,7 @@ exports.updateAccount = async (req, res, next) => {
     account.currency = currency;
     account.number = number;
     account.bankName = bankName;
-    account.initialAmount = initialAmount;
+    account.amount = amount;
     await account.save();
     res.status(200).json({
       message: "Account updated.",

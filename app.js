@@ -10,6 +10,8 @@ const projectRoutes = require("./routes/project");
 const contractorRoutes = require("./routes/contractor");
 const obligationRoutes = require("./routes/obligation");
 const accountRoutes = require("./routes/account");
+const transferRoutes = require("./routes/transfer");
+const transactionRoutes = require("./routes/transaction");
 
 const MONGODB_URI =
   "mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/finbook";
@@ -32,6 +34,8 @@ app.use(projectRoutes);
 app.use(contractorRoutes);
 app.use(obligationRoutes);
 app.use(accountRoutes);
+app.use(transferRoutes);
+app.use(transactionRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);
@@ -47,7 +51,7 @@ app.use((error, req, res, next) => {
 mongoose
   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
   .then(() => {
-    console.log("success");
+    console.log("connected to database");
     app.listen(8081);
   })
   .catch((err) => console.log(err));

@@ -20,6 +20,7 @@ const accountSchema = new Schema({
     type: String,
   },
   bankName: String,
+  amount: Schema.Types.Decimal128,
   initialAmount: Schema.Types.Decimal128,
   initialAmountDate: Date,
 });
