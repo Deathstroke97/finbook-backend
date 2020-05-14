@@ -41,12 +41,16 @@ const transactionSchema = new Schema({
   date: {
     type: Date,
     required: true,
+    default: Date.now,
   },
   relatedDate: {
     type: Date,
     required: true,
   },
-  isPlanned: Boolean,
+  isPlanned: {
+    type: Boolean,
+    default: false,
+  },
   isPeriodic: {
     type: Boolean,
     default: false,
@@ -135,6 +139,24 @@ transactionSchema.methods.addPeriodicChain = async function () {
     beginDate += period;
   }
   const transactions = await Promise.all(promises);
+  return transactions;
+};
+
+transactionSchema.statics.amountToString = function (transactions) {
+  transactions = transactions.map((transaction, index) => {
+    console.log(
+      "type: ",
+      typeof transaction._id,
+      transaction._id,
+      "index: ",
+      index
+    );
+    // return {
+    //   ...transaction._doc,
+    //   _id: transaction._id.toString(),
+    //   amount: transaction.amount.toString(),
+    // };
+  });
   return transactions;
 };
 

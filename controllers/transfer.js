@@ -30,10 +30,10 @@ exports.createTransfer = async (req, res, next) => {
 
   try {
     const fromAccount = await Account.findById(fromBankAccount);
-    fromAccount.amount = +fromAccount.amount - amount;
+    fromAccount.balance = +fromAccount.balance - amount;
     await fromAccount.save();
     const toAccount = await Account.findById(toBankAccount);
-    toAccount.amount = +toAccount.amount + exchangeRate * amount;
+    toAccount.balance = +toAccount.balance + exchangeRate * amount;
     await toAccount.save();
 
     const transfer = new Transfer({
@@ -79,11 +79,11 @@ exports.updateTransfer = async (req, res, next) => {
     }
 
     const fromAccount = await Account.findById(fromBankAccount);
-    fromAccount.amount = +fromAccount.amount + +transfer.amount - amount;
+    fromAccount.balance = +fromAccount.balance + +transfer.amount - amount;
     await fromAccount.save();
     const toAccount = await Account.findById(toBankAccount);
-    toAccount.amount =
-      +toAccount.amount -
+    toAccount.balance =
+      +toAccount.balance -
       transfer.amount * transfer.exchangeRate +
       amount * exchangeRate;
     await toAccount.save();
@@ -118,11 +118,11 @@ exports.deleteTransfer = async (req, res, next) => {
     }
 
     const fromAccount = await Account.findById(transfer.fromBankAccount);
-    fromAccount.amount = +fromAccount.amount + +transfer.amount;
+    fromAccount.balance = +fromAccount.balance + +transfer.amount;
     await fromAccount.save();
     const toAccount = await Account.findById(transfer.toBankAccount);
-    toAccount.amount =
-      +toAccount.amount - transfer.amount * transfer.exchangeRate;
+    toAccount.balance =
+      +toAccount.balance - transfer.amount * transfer.exchangeRate;
     await toAccount.save();
 
     await Transfer.findByIdAndRemove(transferId);

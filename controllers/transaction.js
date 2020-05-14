@@ -1,5 +1,6 @@
-const Transaction = require("../models/transaction");
 const moment = require("moment");
+const Transaction = require("../models/transaction");
+const Account = require("../models/account");
 
 exports.getTransactions = async (req, res, next) => {
   const {
@@ -93,6 +94,10 @@ exports.createTransaction = async (req, res, next) => {
       const transactions = await newTransaction.addPeriodicChain();
       results = [...results, ...transactions];
     }
+    const acc = await Account.findById(account);
+    console.log("results: ", results);
+    results = Transaction.amountToString(results);
+    await acc.updateBalance(results);
     res.status(201).json({
       message: "Transaction created!",
       results: results,

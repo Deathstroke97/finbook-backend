@@ -13,9 +13,6 @@ const businessSchema = new Schema(
       ref: "User",
       required: true,
     },
-    totalIncome: Schema.Types.Decimal128,
-    totalOutcome: Schema.Types.Decimal128,
-    totalBalance: Schema.Types.Decimal128,
   },
   { timestamps: true }
 );
