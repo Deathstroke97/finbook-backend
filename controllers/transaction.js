@@ -62,42 +62,47 @@ exports.createTransaction = async (req, res, next) => {
     repetitionEndDate,
     isObligation,
   } = req.body;
-
-  const transaction = new Transaction({
-    business: businessId,
-    date,
-    type,
-    category,
-    project,
-    contractor,
-    amount,
-    account,
-    description,
-    relatedDate: relatedDate ? relatedDate : date,
-    isPlanned,
-    isPeriodic,
-    period,
-    repetitionEndDate,
-    isObligation,
-  });
-
   try {
-    const newTransaction = await transaction.save();
+    const acc = await Account.findById(account);
+    const transaction = new Transaction({
+      business: businessId,
+      date,
+      type,
+      category,
+      project,
+      contractor,
+      amount,
+      account,
+      description,
+      relatedDate: relatedDate ? relatedDate : date,
+      isPlanned,
+      isPeriodic,
+      period,
+      repetitionEndDate,
+      isObligation,
+      accountBalance:
+        type == "income" ? +acc.balance + +amount : +acc.balance - amount,
+    });
 
-    let results = [newTransaction];
-    if (isObligation && new Date(date) <= new Date()) {
-      await newTransaction.attachObligation();
+    await transaction.save();
+
+    let results = [transaction];
+    if (new Date(date) <= new Date()) {
+      acc.balance =
+        type == "income" ? +acc.balance + +amount : +acc.balance - amount;
+      await acc.save();
+      if (isObligation) {
+        await transaction.attachObligation();
+      }
     }
+
     if (isPeriodic) {
-      newTransaction.periodicChainId = newTransaction._id;
-      await newTransaction.save();
-      const transactions = await newTransaction.addPeriodicChain();
+      transaction.periodicChainId = transaction._id;
+      await transaction.save();
+      const transactions = await transaction.addPeriodicChain();
       results = [...results, ...transactions];
     }
-    const acc = await Account.findById(account);
-    console.log("results: ", results);
     results = Transaction.amountToString(results);
-    await acc.updateBalance(results);
     res.status(201).json({
       message: "Transaction created!",
       results: results,

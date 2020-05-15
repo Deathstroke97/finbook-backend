@@ -30,8 +30,13 @@ const accountSchema = new Schema({
 
 accountSchema.methods.updateBalance = function (transactions) {
   let total = 0;
+  console.log("transactions: ", transactions);
   for (let i = 0; i < transactions.length; i++) {
-    if (!transactions[i].isPlanned) {
+    if (
+      !transactions[i].hasOwnProperty("isPlanned") &&
+      !transactions[i].isPlanned
+    ) {
+      console.log("amount: ", transactions[i].amount);
       total += +transactions[i].amount;
     }
   }

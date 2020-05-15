@@ -66,6 +66,10 @@ const transactionSchema = new Schema({
     default: false,
   },
   obligationId: Schema.Types.ObjectId,
+  accountBalance: {
+    type: Schema.Types.Decimal128,
+    required: true,
+  },
 });
 
 transactionSchema.methods.attachObligation = async function () {
@@ -81,7 +85,7 @@ transactionSchema.methods.attachObligation = async function () {
   });
   await obligation.save();
   this.obligationId = obligation._id;
-  await this.save();
+  return this.save();
 };
 
 transactionSchema.methods.addPeriodicChain = async function () {
@@ -89,6 +93,9 @@ transactionSchema.methods.addPeriodicChain = async function () {
   let endDate = moment(this.repetitionEndDate).valueOf();
   let period = "";
   const promises = [];
+  const account = await Account.findById(this.account);
+  let lastAccountBalance = +this.accountBalance;
+  let actualAccountBalance = +account.balance;
   switch (this.period) {
     case "week":
       period = moment.duration(7, "days").valueOf();
@@ -132,30 +139,37 @@ transactionSchema.methods.addPeriodicChain = async function () {
       isObligation: this.isObligation,
       repetitionEndDate: this.repetitionEndDate,
     });
-    if (this.isObligation && new Date(beginDate) <= new Date()) {
-      promises.push(transaction.attachObligation);
+    if (new Date(beginDate) <= new Date()) {
+      if (this.isObligation) {
+        promises.push(transaction.attachObligation());
+      }
+
+      actualAccountBalance =
+        this.type == "income"
+          ? actualAccountBalance + +this.amount
+          : actualAccountBalance - this.amount;
+    } else {
+      lastAccountBalance =
+        this.type == "income"
+          ? lastAccountBalance + +this.amount
+          : lastAccountBalance - this.amount;
+      transaction.accountBalance = lastAccountBalance;
+      promises.push(transaction.save());
     }
-    promises.push(transaction.save());
     beginDate += period;
   }
   const transactions = await Promise.all(promises);
+  account.balance = actualAccountBalance;
+  await account.save();
   return transactions;
 };
 
 transactionSchema.statics.amountToString = function (transactions) {
-  transactions = transactions.map((transaction, index) => {
-    console.log(
-      "type: ",
-      typeof transaction._id,
-      transaction._id,
-      "index: ",
-      index
-    );
-    // return {
-    //   ...transaction._doc,
-    //   _id: transaction._id.toString(),
-    //   amount: transaction.amount.toString(),
-    // };
+  transactions = transactions.map((transaction) => {
+    return {
+      ...transaction._doc,
+      amount: transaction.amount.toString(),
+    };
   });
   return transactions;
 };
