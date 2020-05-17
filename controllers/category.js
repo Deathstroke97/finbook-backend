@@ -22,7 +22,7 @@ exports.getCategories = async (req, res, next) => {
 exports.postCategory = async (req, res, next) => {
   const id = req.body.id;
   const isDeleted = req.body.isDeleted;
-  const { name, isOwnerTransfer, kind, type, businessId } = req.body;
+  const { name, isOwnerTransfer, kind, type, businessId, isSystem } = req.body;
   try {
     if (id) {
       const category = await Category.findById(id);
@@ -55,6 +55,7 @@ exports.postCategory = async (req, res, next) => {
         kind,
         type,
         business: businessId,
+        isSystem,
       });
       await newCategory.save();
 

@@ -12,6 +12,7 @@ const obligationRoutes = require("./routes/obligation");
 const accountRoutes = require("./routes/account");
 const transferRoutes = require("./routes/transfer");
 const transactionRoutes = require("./routes/transaction");
+// const reportRoutes = require("./routes/reports");
 
 const MONGODB_URI =
   "mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/finbook";
@@ -36,6 +37,7 @@ app.use(obligationRoutes);
 app.use(accountRoutes);
 app.use(transferRoutes);
 app.use(transactionRoutes);
+// app.use(reportRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);

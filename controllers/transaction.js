@@ -1,6 +1,8 @@
 const moment = require("moment");
 const Transaction = require("../models/transaction");
 const Account = require("../models/account");
+const { COMPLETED, PLANNED } = require("../constants");
+const { OPERATION_INCOME } = require("../constants");
 
 exports.getTransactions = async (req, res, next) => {
   const {
@@ -16,25 +18,24 @@ exports.getTransactions = async (req, res, next) => {
     perPage,
   } = req.body;
   try {
-    const totalItems = await Transaction.find().countDocuments();
-    let filters = {
-      business: businessId,
-      date: queryData.createTime,
-      type: type,
-      category: category,
-      account: account,
-      contractor: contractor,
-      project: project,
-      isPlanned:
-        status == "completed" ? false : status == "planned" ? true : undefined,
-    };
-    const transactions = await Transaction.find({ ...filters })
-      .populate("category", "account", "contractor", "project")
+    let query = {};
+    if (businessId) query.business = businessId;
+    if (queryData) query.date = queryData.createTime;
+    if (type) query.type = type;
+    if (category) query.category = category;
+    if (account) query.account = account;
+    if (contractor) query.contractor = contractor;
+    if (project) query.project = project;
+    if (status == COMPLETED) query.isPlanned = false;
+    if (status == PLANNED) query.isPlanned = true;
+
+    const transactions = await Transaction.find(query)
+      .populate("account")
+      .populate("project")
       .sort({ date: -1 });
     res.status(200).json({
       message: "Transactions fetched successfully.",
       transactions: transactions,
-      totalItems: totalItems,
     });
   } catch (error) {
     if (!error.statusCode) {
@@ -56,7 +57,6 @@ exports.createTransaction = async (req, res, next) => {
     account,
     description,
     relatedDate,
-    isPlanned,
     isPeriodic,
     period,
     repetitionEndDate,
@@ -64,6 +64,18 @@ exports.createTransaction = async (req, res, next) => {
   } = req.body;
   try {
     const acc = await Account.findById(account);
+    const lastTransaction = await Transaction.find({
+      business: businessId,
+      date: { $lte: new Date(date) },
+    })
+      .sort({ date: -1, createdAt: -1 })
+      .limit(1);
+    const amountLast = parseFloat(lastTransaction[0].accountBalance);
+
+    const accountBalance =
+      type === OPERATION_INCOME ? amountLast + +amount : amountLast - amount;
+    const isPlanned = new Date(date) > new Date() ? true : false;
+
     const transaction = new Transaction({
       business: businessId,
       date,
@@ -74,22 +86,23 @@ exports.createTransaction = async (req, res, next) => {
       amount,
       account,
       description,
-      relatedDate: relatedDate ? relatedDate : date,
+      relatedDate,
       isPlanned,
       isPeriodic,
       period,
       repetitionEndDate,
       isObligation,
-      accountBalance:
-        type == "income" ? +acc.balance + +amount : +acc.balance - amount,
+      accountBalance,
     });
-
     await transaction.save();
-
+    await Transaction.updateTransactionsBalance(transaction);
     let results = [transaction];
+
     if (new Date(date) <= new Date()) {
       acc.balance =
-        type == "income" ? +acc.balance + +amount : +acc.balance - amount;
+        type == OPERATION_INCOME
+          ? +acc.balance + +amount
+          : +acc.balance - amount;
       await acc.save();
       if (isObligation) {
         await transaction.attachObligation();
@@ -99,14 +112,11 @@ exports.createTransaction = async (req, res, next) => {
     if (isPeriodic) {
       transaction.periodicChainId = transaction._id;
       await transaction.save();
-      const transactions = await transaction.addPeriodicChain();
-      results = [...results, ...transactions];
+      await transaction.addPeriodicChain(acc);
+      // results = [...results, ...transactions];
     }
-    results = Transaction.amountToString(results);
     res.status(201).json({
       message: "Transaction created!",
-      results: results,
-      length: results.length,
     });
   } catch (error) {
     if (!error.statusCode) {
