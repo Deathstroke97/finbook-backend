@@ -245,6 +245,7 @@ transactionSchema.methods.updateTransactionsBalance = async function (gte) {
 transactionSchema.statics.getRangeInAsc = async function (
   businessId,
   accountId,
+  transactionId,
   lowerBound,
   upperBound
 ) {
@@ -258,7 +259,9 @@ transactionSchema.statics.getRangeInAsc = async function (
     })
       .sort({ date: -1, createdAt: 1 })
       .limit(1);
-    if (startTransaction.length === 0) {
+    const idsEqual =
+      startTransaction[0]._id.toString() === transactionId.toString();
+    if (startTransaction.length === 0 || idsEqual) {
       const account = await Account.findById(accountId);
       const transaction = await Transaction.find({
         business: businessId,
@@ -274,9 +277,17 @@ transactionSchema.statics.getRangeInAsc = async function (
           transaction[0].amount - account.initialBalance;
       }
       await transaction[0].save();
+      if (idsEqual) {
+        startTransaction = [];
+      }
       startTransaction.push(transaction[0]);
     }
-    console.log("startTransaction: ", startTransaction);
+    console.log("startTransaction: ", {
+      date: startTransaction[0].date,
+      amount: startTransaction[0].amount.toString(),
+      accountBalance: startTransaction[0].accountBalance.toString(),
+    });
+
     const range = await Transaction.find({
       business: businessId,
       account: accountId,

@@ -168,6 +168,7 @@ exports.updateTransaction = async (req, res, next) => {
       range = await Transaction.getRangeInAsc(
         businessId,
         account,
+        transaction._id,
         lowerBound,
         upperBound
       );
@@ -189,6 +190,7 @@ exports.updateTransaction = async (req, res, next) => {
       range = await Transaction.getRangeInAsc(
         businessId,
         account,
+        transaction._id,
         lowerBound,
         upperBound
       );
