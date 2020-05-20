@@ -64,13 +64,16 @@ exports.createTransaction = async (req, res, next) => {
   } = req.body;
   try {
     const acc = await Account.findById(account);
+    let amountLast = acc.balance;
     const lastTransaction = await Transaction.find({
       business: businessId,
       date: { $lte: new Date(date) },
     })
       .sort({ date: -1, createdAt: -1 })
       .limit(1);
-    const amountLast = parseFloat(lastTransaction[0].accountBalance);
+    if (lastTransaction.length > 0) {
+      amountLast = parseFloat(lastTransaction[0].accountBalance);
+    }
 
     const accountBalance =
       type === OPERATION_INCOME ? amountLast + +amount : amountLast - amount;
@@ -95,8 +98,7 @@ exports.createTransaction = async (req, res, next) => {
       accountBalance,
     });
     await transaction.save();
-    await Transaction.updateTransactionsBalance(transaction);
-    let results = [transaction];
+    await transaction.updateTransactionsBalance(false);
 
     if (new Date(date) <= new Date()) {
       acc.balance =
@@ -110,10 +112,10 @@ exports.createTransaction = async (req, res, next) => {
     }
 
     if (isPeriodic) {
+      transaction.rootOfPeriodicChain = true;
       transaction.periodicChainId = transaction._id;
       await transaction.save();
       await transaction.addPeriodicChain(acc);
-      // results = [...results, ...transactions];
     }
     res.status(201).json({
       message: "Transaction created!",
@@ -124,4 +126,77 @@ exports.createTransaction = async (req, res, next) => {
     }
     next(error);
   }
+};
+
+exports.updateTransaction = async (req, res, next) => {
+  const transactionId = req.params.transactionId;
+  const {
+    businessId,
+    date,
+    category,
+    project,
+    contractor,
+    amount,
+    account,
+    description,
+    relatedDate,
+    isPeriodic,
+    period,
+    repetitionEndDate,
+    isObligation,
+  } = req.body;
+
+  const transaction = await Transaction.findById(transactionId);
+
+  // transaction.category = category;
+  // transaction.project = project;
+  // transaction.contractor = contractor;
+  // transaction.account = account;
+  // transaction.description = description;
+  // transaction.relatedDate = relatedDate;
+  let transactions = [];
+
+  if (new Date(transaction.date) !== new Date(date)) {
+    let lowerBound, upperBound, range;
+
+    if (new Date(transaction.date) < new Date(date)) {
+      lowerBound = transaction.date;
+      upperBound = date;
+      transaction.date = date;
+
+      await transaction.save();
+      range = await Transaction.getRangeInAsc(
+        businessId,
+        account,
+        lowerBound,
+        upperBound
+      );
+
+      const updated = await Transaction.updateBalanceInRange(range);
+      console.log("operations after updating: ");
+      updated.forEach((element) => {
+        console.log({
+          date: new Date(element.date).toISOString(),
+          amount: element.amount.toString(),
+          accountBalance: element.accountBalance.toString(),
+        });
+      });
+    } else {
+      lowerBound = date;
+      upperBound = transaction.date;
+      transaction.date = date;
+      await transaction.save();
+      range = await Transaction.getRangeInAsc(
+        businessId,
+        account,
+        lowerBound,
+        upperBound
+      );
+      await Transaction.updateBalanceInRange(range);
+    }
+  }
+
+  res.status(200).json({
+    message: "Transaction updated.",
+  });
 };

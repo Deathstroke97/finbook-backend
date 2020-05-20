@@ -8,10 +8,10 @@ router.post("/transactions", transactionController.getTransactions);
 
 router.post("/transaction", transactionController.createTransaction);
 
-// router.put(
-//   "/transaction/:transactionId",
-//   transactionController.updateTransaction
-// );
+router.put(
+  "/transaction/:transactionId",
+  transactionController.updateTransaction
+);
 
 // router.delete(
 //   "/transaction/:transactionId",
