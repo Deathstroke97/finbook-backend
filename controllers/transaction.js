@@ -1,6 +1,7 @@
 const moment = require("moment");
 const Transaction = require("../models/transaction");
 const Account = require("../models/account");
+const Obligation = require("../models/obligation");
 const { COMPLETED, PLANNED } = require("../constants");
 const { OPERATION_INCOME } = require("../constants");
 
@@ -52,6 +53,7 @@ exports.createTransaction = async (req, res, next) => {
   try {
     const acc = await Account.findById(account);
     let amountLast = acc.balance;
+
     const startTransaction = await Transaction.find({
       business: businessId,
       date: { $lte: date },
@@ -64,11 +66,13 @@ exports.createTransaction = async (req, res, next) => {
 
     const accountBalance =
       type === OPERATION_INCOME ? amountLast + +amount : amountLast - amount;
+
     const isPlanned = moment(date) > moment() ? true : false;
 
     const transaction = new Transaction({
       business: body.businessId,
       date: body.date,
+      isPlanned: isPlanned,
       type: body.type,
       category: body.category,
       project: body.project,
@@ -77,12 +81,11 @@ exports.createTransaction = async (req, res, next) => {
       account: body.account,
       description: body.description,
       relatedDate: body.relatedDate,
-      isPlanned: isPlanned,
-      isPeriodic: body.isPeriodic,
-      period: body.period && body.period,
-      repetitionEndDate: body.repetitionEndDate,
       isObligation: body.isObligation,
       accountBalance: accountBalance,
+      isPeriodic: body.isPeriodic,
+      period: body.period && body.period,
+      repetitionEndDate: body.repetitionEndDate && body.repetitionEndDate,
     });
     await transaction.save();
     await transaction.updateTransactionsBalanceOnCreate();
@@ -118,7 +121,14 @@ exports.createTransaction = async (req, res, next) => {
 exports.updateTransaction = async (req, res, next) => {
   const transactionId = req.params.transactionId;
   const { body } = req;
-  const { businessId, date, amount, account } = req.body;
+  const {
+    businessId,
+    date,
+    amount,
+    account,
+    isObligation,
+    isPeriodic,
+  } = req.body;
 
   try {
     const transaction = await Transaction.findById(transactionId);
@@ -143,7 +153,6 @@ exports.updateTransaction = async (req, res, next) => {
     const transactionDate = moment(transaction.date).format("YYYY-MM-DD");
     if (transactionDate !== date) {
       let lowerBound, upperBound, range;
-
       if (moment(transaction.date) < moment(date)) {
         lowerBound = transaction.date;
         upperBound = date;
@@ -161,6 +170,41 @@ exports.updateTransaction = async (req, res, next) => {
         upperBound
       );
       await Transaction.updateBalanceInRange(range);
+    }
+
+    if (!isObligation && transaction.isObligation) {
+      if (moment(transaction.date) > moment()) {
+        transaction.isObligation = false;
+      } else {
+        if (!transaction.isPlanned) {
+          if (transaction.type === OPERATION_INCOME) {
+            contractor.balance = +contractor.balance - transaction.amount;
+          }
+          if (transaction.type === OPERATION_OUTCOME) {
+            contractor.balance = +contractor.balance + +transaction.amount;
+          }
+          await Obligation.findByIdAndRemove(transaction.obligationId);
+        }
+      }
+    }
+    if (isObligation && !transaction.isObligation) {
+      if (moment(transaction.date) > moment()) {
+        transaction.isObligation = true;
+      } else {
+        await transaction.attachObligation();
+      }
+    }
+    if (isPeriodic && !transaction.isPeriodic) {
+      transaction.rootOfPeriodicChain = true;
+      transaction.periodicChainId = transaction._id;
+      await transaction.save();
+      await transaction.addPeriodicChain(account);
+    }
+    if (!isPeriodic && transaction.isPeriodic) {
+      await Transaction.deleteMany({
+        periodicChainId: transaction._id,
+        isPlanned: true,
+      });
     }
   } catch (error) {
     if (!error.statusCode) {

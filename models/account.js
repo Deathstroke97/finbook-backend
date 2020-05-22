@@ -20,8 +20,14 @@ const accountSchema = new Schema({
     type: String,
   },
   bankName: String,
-  balance: Schema.Types.Decimal128,
-  initialBalance: Schema.Types.Decimal128,
+  balance: {
+    type: Schema.Types.Decimal128,
+    default: 0,
+  },
+  initialBalance: {
+    type: Schema.Types.Decimal128,
+    default: 0,
+  },
   initialBalanceDate: {
     type: Date,
     default: Date.now,

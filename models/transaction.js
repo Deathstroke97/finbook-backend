@@ -4,6 +4,8 @@ const moment = require("moment");
 const Schema = mongoose.Schema;
 const Obligation = require("../models/obligation");
 const Account = require("../models/account");
+const Contractor = require("../models/contractor");
+
 const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
 const {
   PERIOD_WEEK,
@@ -91,11 +93,19 @@ const transactionSchema = new Schema(
 
 transactionSchema.methods.attachObligation = async function () {
   const account = await Account.findById(this.account);
+  const contractor = await Contractor.findById(this.contractor);
+  if (this.type === OPERATION_INCOME) {
+    contractor.balance = +contractor.balance + +this.amount;
+  }
+  if (this.type === OPERATION_OUTCOME) {
+    contractor.balance = +contractor.balance - this.amount;
+  }
+  await contractor.save();
   const obligation = new Obligation({
     business: this.business,
     date: this.date,
     amount: this.amount,
-    type: this.type == "income" ? "in" : "out",
+    type: this.type == OPERATION_INCOME ? "in" : "out",
     contractor: this.contractor,
     currency: account.currency,
     transaction: this._id,
@@ -320,13 +330,7 @@ transactionSchema.methods.updateTransactionsBalance = async function (diff) {
       business: this.business,
       account: this.account,
     };
-    // let transactions = await Transaction.find({
-    //   business: this.business,
-    //   account: this.account,
-    //   date: { $gte: this.date },
-    //   createdAt: { $gte: this.createdAt },
-    // });
-    let transactions = await Transaction.find({
+    const transactions = await Transaction.find({
       $or: [
         {
           ...filter,

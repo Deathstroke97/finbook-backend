@@ -17,7 +17,10 @@ const contractorSchema = new Schema(
     phoneNumber: String,
     email: String,
     description: String,
-    balance: Schema.Types.Decimal128,
+    balance: {
+      type: Schema.Types.Decimal128,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
