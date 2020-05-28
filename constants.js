@@ -15,3 +15,9 @@ module.exports.PERIOD_TWO_MONTH = "twoMonth";
 module.exports.PERIOD_QUARTER = "quarter";
 module.exports.PERIOD_HALF_YEAR = "halfYear";
 module.exports.PERIOD_YEAR = "year";
+
+module.exports.CATEGORY = "category";
+module.exports.ACTIVITY = "activity";
+module.exports.ACCOUNT = "account";
+module.exports.CONTRACTOR = "contractor";
+module.exports.PROJECT = "project";

@@ -2,6 +2,7 @@ const moment = require("moment");
 const Transaction = require("../models/transaction");
 const Account = require("../models/account");
 const Obligation = require("../models/obligation");
+const Contractor = require("../models/contractor");
 const { COMPLETED, PLANNED } = require("../constants");
 const { OPERATION_INCOME } = require("../constants");
 
@@ -52,7 +53,7 @@ exports.createTransaction = async (req, res, next) => {
 
   try {
     const acc = await Account.findById(account);
-    let amountLast = acc.balance;
+    let amountLast = +acc.balance;
 
     const startTransaction = await Transaction.find({
       business: businessId,
@@ -177,12 +178,14 @@ exports.updateTransaction = async (req, res, next) => {
         transaction.isObligation = false;
       } else {
         if (!transaction.isPlanned) {
+          const contractor = await Contractor.findById(body.contractor);
           if (transaction.type === OPERATION_INCOME) {
             contractor.balance = +contractor.balance - transaction.amount;
           }
           if (transaction.type === OPERATION_OUTCOME) {
             contractor.balance = +contractor.balance + +transaction.amount;
           }
+          await contractor.save();
           await Obligation.findByIdAndRemove(transaction.obligationId);
         }
       }
@@ -214,5 +217,45 @@ exports.updateTransaction = async (req, res, next) => {
   }
   res.status(200).json({
     message: "Transaction updated.",
+  });
+};
+
+exports.deleteTransaction = async (req, res, next) => {
+  const transactionId = req.params.transactionId;
+  try {
+    const transaction = await Transaction.findById(transactionId);
+
+    if (transaction.isObligation && !transaction.isPlanned) {
+      const contractor = await Contractor.findById(body.contractor);
+      if (transaction.type === OPERATION_INCOME) {
+        contractor.balance = +contractor.balance - transaction.amount;
+      }
+      if (transaction.type === OPERATION_OUTCOME) {
+        contractor.balance = +contractor.balance + +transaction.amount;
+      }
+      await contractor.save();
+      await Obligation.findByIdAndRemove(transaction.obligationId);
+    }
+
+    if (!transaction.isPlanned) {
+      const account = await Account.findById(transaction.account);
+      if (transaction.type === OPERATION_INCOME) {
+        account.balance = +account.balance - transaction.amount;
+      } else {
+        account.balance = +account.balance + +transaction.amount;
+      }
+      await account.save();
+    }
+    const diff = 0 - transaction.amount;
+    await transaction.updateTransactionsBalance(diff);
+    await Transaction.findByIdAndRemove(transactionId);
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+  res.status(200).json({
+    message: "Transaction deleted.",
   });
 };

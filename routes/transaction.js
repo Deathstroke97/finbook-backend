@@ -13,9 +13,9 @@ router.put(
   transactionController.updateTransaction
 );
 
-// router.delete(
-//   "/transaction/:transactionId",
-//   transactionController.deleteTransaction
-// );
+router.delete(
+  "/transaction/:transactionId",
+  transactionController.deleteTransaction
+);
 
 module.exports = router;
