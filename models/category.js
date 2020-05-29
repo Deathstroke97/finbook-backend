@@ -117,45 +117,42 @@ categorySchema.statics.generateReportByCategory = async function ({
   // console.log("aggResult: ", aggResult);
 
   let report = {
-    moneyInTheBeginning: populateWithBuckets([], queryData),
-    incomes: populateWithBuckets([], queryData),
-    outcomes: populateWithBuckets([], queryData),
-    balance: populateWithBuckets([], queryData),
-    moneyInTheEnd: populateWithBuckets([], queryData),
+    moneyInTheBeginning: populateWithBuckets(queryData),
+    incomes: populateWithBuckets(queryData),
+    outcomes: populateWithBuckets(queryData),
+    balance: populateWithBuckets(queryData),
+    moneyInTheEnd: populateWithBuckets(queryData),
     detailReport: [],
   };
 
-  await getMoneyInTheBeginning(
-    businessId,
-    countPlanned,
-    report.moneyInTheBeginning
-  );
-  await getMoneyInTheEnd(businessId, countPlanned, report.moneyInTheEnd);
+  await getMoneyInTheBeginning(businessId, countPlanned, report);
+  await getMoneyInTheEnd(businessId, countPlanned, report);
 
   aggResult.forEach((category) => {
     let categoryInfo = {
       name: category._id.category,
       kind: category._id.kind,
       type: category._id.type,
-      periods: populateWithBuckets([], queryData),
-      total: 0,
+      periods: populateWithBuckets(queryData),
     };
 
     category.operations.forEach((operation, index) => {
       let opMonth = moment(operation.date).month();
       let opYear = moment(operation.date).year();
-      categoryInfo.total += +operation.amount;
+      categoryInfo.periods.total += +operation.amount;
 
-      categoryInfo.periods.forEach((period, index) => {
+      categoryInfo.periods.details.forEach((period, index) => {
         if (period.month == opMonth && period.year == opYear) {
           period.totalAmount += +operation.amount;
           period.operations.push(operation);
 
           if (categoryInfo.type === 1) {
-            report.incomes[index].totalAmount += +operation.amount;
+            report.incomes.total += +operation.amount;
+            report.incomes.details[index].totalAmount += +operation.amount;
           }
           if (categoryInfo.type === 2) {
-            report.outcomes[index].totalAmount += +operation.amount;
+            report.outcomes.total += +operation.amount;
+            report.outcomes.details[index].totalAmount += +operation.amount;
           }
         }
       });
@@ -163,7 +160,7 @@ categorySchema.statics.generateReportByCategory = async function ({
     report.detailReport.push(categoryInfo);
   });
 
-  getBalance(report, report.balance);
+  getBalance(report);
 
   return report;
 };
