@@ -4,12 +4,16 @@ const Schema = mongoose.Schema;
 const Account = require("../models/account");
 const Project = require("../models/project");
 const Contractor = require("../models/contractor");
+const Transaction = require("../models/transaction");
+
 const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
 const ObjectId = mongoose.Types.ObjectId;
 const {
-  populateOverallReport,
   populateWithBuckets,
-} = require("../utils/functions");
+  getMoneyInTheBeginning,
+  getMoneyInTheEnd,
+  getBalance,
+} = require("../utils/category");
 
 const categorySchema = new Schema({
   name: {
@@ -38,7 +42,10 @@ const categorySchema = new Schema({
 categorySchema.statics.generateReportByCategory = async function ({
   businessId,
   queryData,
+  countPlanned,
 }) {
+  const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
+
   const Category = mongoose.model("Category", categorySchema);
 
   const aggResult = await Category.aggregate([
@@ -61,9 +68,10 @@ categorySchema.statics.generateReportByCategory = async function ({
     {
       $match: {
         "transactions.date": {
-          $gte: new Date(moment().startOf("year").valueOf()),
-          $lte: new Date(moment().endOf("year").valueOf()),
+          $gte: new Date(queryData.createTime.$gte),
+          $lte: new Date(queryData.createTime.$lte),
         },
+        ...filterPlanned,
       },
     },
     {
@@ -93,16 +101,6 @@ categorySchema.statics.generateReportByCategory = async function ({
       },
     },
   ]);
-
-  // const test = {
-  //   createdTime: {
-  //     $gte: moment("2020-05-01"),
-  //     $lte: moment("2020-09-01"),
-  //   },
-  // };
-  // console.log("gte: ", moment(test.createdTime.$gte).month());
-  // console.log("lte: ", moment(test.createdTime.$lte).month());
-
   // await Account.populate(aggResult, {
   //   path: "operations.account",
   //   select: "name",
@@ -116,62 +114,57 @@ categorySchema.statics.generateReportByCategory = async function ({
   //   select: "name",
   // });
 
+  // console.log("aggResult: ", aggResult);
+
   let report = {
-    moneyInTheBeginning: [{}],
-    // overallReport: { incomes: [], outcomes: [] },
+    moneyInTheBeginning: populateWithBuckets([], queryData),
+    incomes: populateWithBuckets([], queryData),
+    outcomes: populateWithBuckets([], queryData),
+    balance: populateWithBuckets([], queryData),
+    moneyInTheEnd: populateWithBuckets([], queryData),
     detailReport: [],
-    incomes: [],
-    outcomes: [],
   };
 
-  populateWithBuckets(report.incomes, queryData);
-  populateWithBuckets(report.outcomes, queryData);
+  await getMoneyInTheBeginning(
+    businessId,
+    countPlanned,
+    report.moneyInTheBeginning
+  );
+  await getMoneyInTheEnd(businessId, countPlanned, report.moneyInTheEnd);
 
   aggResult.forEach((category) => {
     let categoryInfo = {
       name: category._id.category,
       kind: category._id.kind,
       type: category._id.type,
-      months: populateWithBuckets([], queryData),
+      periods: populateWithBuckets([], queryData),
+      total: 0,
     };
 
-    let month = moment(category.operations[0].date).month();
-    let year = moment(category.operations[0].date).year();
-
-    categoryInfo.months.push({
-      month: month,
-      year: year,
-      totalAmount: +category.operations[0].amount,
-      operations: [category.operations[0]],
-    });
-
     category.operations.forEach((operation, index) => {
-      if (index === 0) return;
-
       let opMonth = moment(operation.date).month();
       let opYear = moment(operation.date).year();
+      categoryInfo.total += +operation.amount;
 
-      if (opMonth === month && opYear == year) {
-        categoryInfo.months[
-          categoryInfo.months.length - 1
-        ].totalAmount += +operation.amount;
-        categoryInfo.months[categoryInfo.months.length - 1].operations.push(
-          operation
-        );
-      } else {
-        month = moment(operation.date).month();
-        year = moment(operation.date).year();
-        categoryInfo.months.push({
-          month: month,
-          year: year,
-          totalAmount: +operation.amount,
-          operations: [operation],
-        });
-      }
+      categoryInfo.periods.forEach((period, index) => {
+        if (period.month == opMonth && period.year == opYear) {
+          period.totalAmount += +operation.amount;
+          period.operations.push(operation);
+
+          if (categoryInfo.type === 1) {
+            report.incomes[index].totalAmount += +operation.amount;
+          }
+          if (categoryInfo.type === 2) {
+            report.outcomes[index].totalAmount += +operation.amount;
+          }
+        }
+      });
     });
     report.detailReport.push(categoryInfo);
   });
-  populateOverallReport(report);
+
+  getBalance(report, report.balance);
+
   return report;
 };
 
