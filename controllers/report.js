@@ -16,6 +16,9 @@ exports.getCashFlow = async (req, res, next) => {
       case CATEGORY:
         result = await Category.generateReportByCategory(req.body);
         break;
+      case ACTIVITY:
+        result = await Category.generateReportByActivivty(req.body);
+        break;
       case ACCOUNT:
         result = await Category.generateReportByAccount(req.body);
         break;

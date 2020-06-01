@@ -25,6 +25,40 @@ exports.populateWithBuckets = (queryData) => {
   };
 };
 
+exports.constuctReport = (aggResult, report, queryData) => {
+  aggResult.forEach((category) => {
+    let categoryInfo = {
+      name: category._id.category,
+      kind: category._id.kind,
+      type: category._id.type,
+      periods: exports.populateWithBuckets(queryData),
+    };
+
+    category.operations.forEach((operation, index) => {
+      let opMonth = moment(operation.date).month();
+      let opYear = moment(operation.date).year();
+      categoryInfo.periods.total += +operation.amount;
+
+      categoryInfo.periods.details.forEach((period, index) => {
+        if (period.month == opMonth && period.year == opYear) {
+          period.totalAmount += +operation.amount;
+          period.operations.push(operation);
+
+          if (categoryInfo.type === 1) {
+            report.incomes.total += +operation.amount;
+            report.incomes.details[index].totalAmount += +operation.amount;
+          }
+          if (categoryInfo.type === 2) {
+            report.outcomes.total += +operation.amount;
+            report.outcomes.details[index].totalAmount += +operation.amount;
+          }
+        }
+      });
+    });
+    report.detailReport.push(categoryInfo);
+  });
+};
+
 exports.getMoneyInTheBeginning = async (businessId, countPlanned, report) => {
   const array = report.moneyInTheBeginning.details;
   const filterPlanned = countPlanned ? {} : { isPlanned: false };

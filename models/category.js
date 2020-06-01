@@ -13,6 +13,7 @@ const {
   getMoneyInTheBeginning,
   getMoneyInTheEnd,
   getBalance,
+  constuctReport,
 } = require("../utils/category");
 
 const categorySchema = new Schema({
@@ -101,6 +102,7 @@ categorySchema.statics.generateReportByCategory = async function ({
       },
     },
   ]);
+
   // await Account.populate(aggResult, {
   //   path: "operations.account",
   //   select: "name",
@@ -114,8 +116,6 @@ categorySchema.statics.generateReportByCategory = async function ({
   //   select: "name",
   // });
 
-  // console.log("aggResult: ", aggResult);
-
   let report = {
     moneyInTheBeginning: populateWithBuckets(queryData),
     incomes: populateWithBuckets(queryData),
@@ -128,41 +128,74 @@ categorySchema.statics.generateReportByCategory = async function ({
   await getMoneyInTheBeginning(businessId, countPlanned, report);
   await getMoneyInTheEnd(businessId, countPlanned, report);
 
-  aggResult.forEach((category) => {
-    let categoryInfo = {
-      name: category._id.category,
-      kind: category._id.kind,
-      type: category._id.type,
-      periods: populateWithBuckets(queryData),
-    };
-
-    category.operations.forEach((operation, index) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-      categoryInfo.periods.total += +operation.amount;
-
-      categoryInfo.periods.details.forEach((period, index) => {
-        if (period.month == opMonth && period.year == opYear) {
-          period.totalAmount += +operation.amount;
-          period.operations.push(operation);
-
-          if (categoryInfo.type === 1) {
-            report.incomes.total += +operation.amount;
-            report.incomes.details[index].totalAmount += +operation.amount;
-          }
-          if (categoryInfo.type === 2) {
-            report.outcomes.total += +operation.amount;
-            report.outcomes.details[index].totalAmount += +operation.amount;
-          }
-        }
-      });
-    });
-    report.detailReport.push(categoryInfo);
-  });
-
+  constuctReport(aggResult, report, queryData);
   getBalance(report);
 
   return report;
+};
+
+categorySchema.statics.generateReportByActivity = async function ({
+  businessId,
+  queryData,
+  countPlanned,
+}) {
+  const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
+
+  const Category = mongoose.model("Category", categorySchema);
+
+  const aggResult = await Category.aggregate([
+    {
+      $match: {
+        business: ObjectId(businessId),
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "_id",
+        foreignField: "category",
+        as: "transactions",
+      },
+    },
+    {
+      $unwind: "$transactions",
+    },
+    {
+      $match: {
+        "transactions.date": {
+          $gte: new Date(queryData.createTime.$gte),
+          $lte: new Date(queryData.createTime.$lte),
+        },
+        ...filterPlanned,
+      },
+    },
+    {
+      $project: {
+        "transactions.isPlanned": 0,
+        "transactions.isPeriodic": 0,
+        "transactions.rootOfPeriodicChain": 0,
+        "transactions.isObligation": 0,
+
+        "transactions.business:": 0,
+        "transactions.contractor": 0,
+        "transactions.project": 0,
+        "transactions.account:": 0,
+        "transactions.createdAt": 0,
+        "transactions.updatedAt:": 0,
+        "transactions.accountBalance": 0,
+      },
+    },
+    {
+      $sort: { "transactions.date": 1 },
+    },
+    {
+      $group: {
+        _id: { category: "$name", kind: "$kind", type: "$type" },
+        total: { $sum: "$transactions.amount" },
+        operations: { $push: "$transactions" },
+      },
+    },
+  ]);
 };
 
 module.exports = mongoose.model("Category", categorySchema);
