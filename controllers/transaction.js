@@ -4,7 +4,7 @@ const Account = require("../models/account");
 const Obligation = require("../models/obligation");
 const Contractor = require("../models/contractor");
 const { COMPLETED, PLANNED } = require("../constants");
-const { OPERATION_INCOME } = require("../constants");
+const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
 
 exports.getTransactions = async (req, res, next) => {
   const {

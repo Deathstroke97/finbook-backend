@@ -21,3 +21,6 @@ module.exports.ACTIVITY = "activity";
 module.exports.ACCOUNT = "account";
 module.exports.CONTRACTOR = "contractor";
 module.exports.PROJECT = "project";
+
+module.exports.INCOME = 1;
+module.exports.OUTCOME = 2;

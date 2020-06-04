@@ -1,5 +1,6 @@
 const Transaction = require("../models/transaction");
 const Category = require("../models/category");
+const Account = require("../models/account");
 const {
   CATEGORY,
   ACTIVITY,
@@ -17,10 +18,10 @@ exports.getCashFlow = async (req, res, next) => {
         result = await Category.generateReportByCategory(req.body);
         break;
       case ACTIVITY:
-        result = await Category.generateReportByActivivty(req.body);
+        result = await Category.generateReportByActivity(req.body);
         break;
       case ACCOUNT:
-        result = await Category.generateReportByAccount(req.body);
+        result = await Account.generateReportByAccounts(req.body);
         break;
       case CONTRACTOR:
         result = await Category.generateReportByContractor(req.body);

@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 const moment = require("moment");
 
 const Schema = mongoose.Schema;
-const Obligation = require("../models/obligation");
-const Account = require("../models/account");
-const Contractor = require("../models/contractor");
+const Obligation = require("./obligation");
+const Account = require("./account");
+const Contractor = require("./contractor");
 
 const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
 const {
@@ -325,6 +325,7 @@ transactionSchema.statics.updateBalanceInRange = async function (range) {
 transactionSchema.methods.updateTransactionsBalance = async function (diff) {
   try {
     const Transaction = mongoose.model("Transaction", transactionSchema);
+
     const account = await Account.findById(this.account);
     const filter = {
       business: this.business,

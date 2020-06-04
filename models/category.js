@@ -1,20 +1,23 @@
 const mongoose = require("mongoose");
 const moment = require("moment");
 const Schema = mongoose.Schema;
-const Account = require("../models/account");
-const Project = require("../models/project");
-const Contractor = require("../models/contractor");
-const Transaction = require("../models/transaction");
-
-const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
+const Account = require("./account");
+const Project = require("./project");
+const Contractor = require("./contractor");
+const Transaction = require("./transaction");
 const ObjectId = mongoose.Types.ObjectId;
+
 const {
-  populateWithBuckets,
   getMoneyInTheBeginning,
   getMoneyInTheEnd,
   getBalance,
   constuctReport,
+  getSkeletonForActivityReport,
+  constructReportByActivity,
+  putCategoriesByActivity,
 } = require("../utils/category");
+
+const { populateWithBuckets } = require("../utils/functions");
 
 const categorySchema = new Schema({
   name: {
@@ -125,8 +128,8 @@ categorySchema.statics.generateReportByCategory = async function ({
     detailReport: [],
   };
 
-  await getMoneyInTheBeginning(businessId, countPlanned, report);
-  await getMoneyInTheEnd(businessId, countPlanned, report);
+  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
+  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
 
   constuctReport(aggResult, report, queryData);
   getBalance(report);
@@ -196,6 +199,18 @@ categorySchema.statics.generateReportByActivity = async function ({
       },
     },
   ]);
+
+  const report = getSkeletonForActivityReport(queryData);
+  putCategoriesByActivity(aggResult, report, queryData);
+
+  constructReportByActivity(report.operational);
+  constructReportByActivity(report.financial);
+  constructReportByActivity(report.investment);
+
+  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
+  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
+
+  return report;
 };
 
 module.exports = mongoose.model("Category", categorySchema);

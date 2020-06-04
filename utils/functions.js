@@ -1,14 +1,15 @@
 const moment = require("moment");
 const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
 
-exports.populateWithBuckets = (array, queryData) => {
+exports.populateWithBuckets = (queryData) => {
+  let details = [];
   let startDate = moment(queryData.createTime.$gte);
   let endDate = moment(queryData.createTime.$lte);
 
   let month = moment(startDate);
 
   while (month <= endDate) {
-    array.push({
+    details.push({
       month: month.month(),
       year: month.year(),
       totalAmount: 0,
@@ -16,5 +17,8 @@ exports.populateWithBuckets = (array, queryData) => {
     });
     month.add(1, "month");
   }
-  return array;
+  return {
+    total: 0,
+    details,
+  };
 };
