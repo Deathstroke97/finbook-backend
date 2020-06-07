@@ -8,16 +8,13 @@ const Transaction = require("./transaction");
 const ObjectId = mongoose.Types.ObjectId;
 
 const {
-  getMoneyInTheBeginning,
-  getMoneyInTheEnd,
-  getBalance,
-  constuctReport,
-  getSkeletonForActivityReport,
-  constructReportByActivity,
   putCategoriesByActivity,
+  getSkeletonForCategoryReport,
+  constructReportByCategory,
+  filterEmptyCategories,
 } = require("../utils/category");
 
-const { populateWithBuckets } = require("../utils/functions");
+const { populateWithBuckets, calculateBalance } = require("../utils/functions");
 
 const categorySchema = new Schema({
   name: {
@@ -104,6 +101,24 @@ categorySchema.statics.generateReportByCategory = async function ({
         operations: { $push: "$transactions" },
       },
     },
+    {
+      $project: {
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
   ]);
 
   // await Account.populate(aggResult, {
@@ -119,20 +134,16 @@ categorySchema.statics.generateReportByCategory = async function ({
   //   select: "name",
   // });
 
-  let report = {
-    moneyInTheBeginning: populateWithBuckets(queryData),
-    incomes: populateWithBuckets(queryData),
-    outcomes: populateWithBuckets(queryData),
-    balance: populateWithBuckets(queryData),
-    moneyInTheEnd: populateWithBuckets(queryData),
-    detailReport: [],
-  };
+  const report = getSkeletonForCategoryReport(queryData);
+
+  constructReportByCategory(aggResult, report, queryData);
 
   await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
   await Account.getMoneyInTheEnd(businessId, countPlanned, report);
 
-  constuctReport(aggResult, report, queryData);
-  getBalance(report);
+  calculateBalance(report);
+
+  filterEmptyCategories(report);
 
   return report;
 };
@@ -198,19 +209,60 @@ categorySchema.statics.generateReportByActivity = async function ({
         operations: { $push: "$transactions" },
       },
     },
+    {
+      $project: {
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
   ]);
 
-  const report = getSkeletonForActivityReport(queryData);
-  putCategoriesByActivity(aggResult, report, queryData);
+  const activities = putCategoriesByActivity(aggResult, queryData);
 
-  constructReportByActivity(report.operational);
-  constructReportByActivity(report.financial);
-  constructReportByActivity(report.investment);
+  constructReportByCategory(
+    activities.financial.categories,
+    activities.financial.report,
+    queryData
+  );
+  constructReportByCategory(
+    activities.operational.categories,
+    activities.operational.report,
+    queryData
+  );
+  constructReportByCategory(
+    activities.investment.categories,
+    activities.investment.report,
+    queryData
+  );
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
+  calculateBalance(activities.financial.report);
+  calculateBalance(activities.operational.report);
+  calculateBalance(activities.investment.report);
 
-  return report;
+  filterEmptyCategories(activities.financial.report);
+  filterEmptyCategories(activities.operational.report);
+  filterEmptyCategories(activities.investment.report);
+
+  delete activities.financial.categories;
+  delete activities.operational.categories;
+  delete activities.investment.categories;
+
+  await Account.getMoneyInTheBeginning(businessId, countPlanned, activities);
+  await Account.getMoneyInTheEnd(businessId, countPlanned, activities);
+
+  return activities;
 };
 
 module.exports = mongoose.model("Category", categorySchema);

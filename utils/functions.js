@@ -25,6 +25,7 @@ exports.populateWithBuckets = (queryData) => {
 
 exports.calculateBalance = (report) => {
   const { incomes, outcomes, balance } = report;
+
   for (let i = 0; i < balance.details.length; i++) {
     balance.details[i].totalAmount =
       incomes.details[i].totalAmount - outcomes.details[i].totalAmount;
