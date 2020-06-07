@@ -40,7 +40,6 @@ const transactionSchema = new Schema(
     project: {
       type: Schema.Types.ObjectId,
       ref: "Project",
-      required: true,
     },
     amount: {
       type: Schema.Types.Decimal128,

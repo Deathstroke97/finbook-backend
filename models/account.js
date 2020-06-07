@@ -2,11 +2,8 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const moment = require("moment");
-const { populateWithBuckets } = require("../utils/functions");
-const {
-  getSkeletonForAccountReport,
-  calculateBalance,
-} = require("../utils/account");
+const { populateWithBuckets, calculateBalance } = require("../utils/functions");
+const { getSkeletonForAccountReport } = require("../utils/account");
 
 const accountSchema = new Schema({
   name: {

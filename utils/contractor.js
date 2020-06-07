@@ -1,16 +1,16 @@
 const { populateWithBuckets } = require("./functions");
 
-exports.getSkeletonForAccountReport = (queryData) => {
+exports.getSkeletonForContractorReport = (queryData) => {
   const report = {
     moneyInTheBeginning: populateWithBuckets(queryData),
     incomes: {
       ...populateWithBuckets(queryData),
 
-      accounts: [],
+      contractors: [],
     },
     outcomes: {
       ...populateWithBuckets(queryData),
-      accounts: [],
+      contractors: [],
     },
     balance: {
       ...populateWithBuckets(queryData),
