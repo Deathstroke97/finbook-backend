@@ -5,7 +5,11 @@ const ObjectId = mongoose.Types.ObjectId;
 const Account = require("./account");
 const moment = require("moment");
 const { populateWithBuckets, calculateBalance } = require("../utils/functions");
-const { getSkeletonForContractorReport } = require("../utils/contractor");
+const {
+  getSkeletonForContractorReport,
+  constructReportByContractor,
+  getEmptyContractorTransactions,
+} = require("../utils/contractor");
 
 const contractorSchema = new Schema(
   {
@@ -108,59 +112,15 @@ contractorSchema.statics.generateReportByContractor = async function ({
       },
     },
   ]);
+  const emptyContractors = await getEmptyContractorTransactions(
+    businessId,
+    countPlanned,
+    queryData
+  );
+  aggResult.push(emptyContractors);
 
   const report = getSkeletonForContractorReport(queryData);
-
-  aggResult.forEach((contractor) => {
-    report.incomes.contractors.push({
-      name: contractor._id.contractor,
-      periods: populateWithBuckets(queryData),
-    });
-
-    contractor.incomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-
-      const lastIndex = report.incomes.contractors.length - 1;
-
-      report.incomes.contractors[lastIndex].periods.details.forEach(
-        (period, index) => {
-          if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.incomes.total += +operation.amount;
-            report.incomes.details[index].totalAmount += +operation.amount;
-            report.incomes.contractors[
-              lastIndex
-            ].periods.total += +operation.amount;
-          }
-        }
-      );
-    });
-
-    report.outcomes.contractors.push({
-      name: contractor._id.contractor,
-      periods: populateWithBuckets(queryData),
-    });
-    contractor.outcomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-
-      const lastIndex = report.outcomes.contractors.length - 1;
-
-      report.outcomes.contractors[lastIndex].periods.details.forEach(
-        (period, index) => {
-          if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.outcomes.total += +operation.amount;
-            report.outcomes.details[index].totalAmount += +operation.amount;
-            report.outcomes.contractors[
-              lastIndex
-            ].periods.total += +operation.amount;
-          }
-        }
-      );
-    });
-  });
+  constructReportByContractor(aggResult, report, queryData);
 
   await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
   await Account.getMoneyInTheEnd(businessId, countPlanned, report);

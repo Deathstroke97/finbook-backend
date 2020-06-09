@@ -129,40 +129,34 @@ categorySchema.statics.generateReportByCategory = async function ({
       },
     },
   ]);
-  console.log("1");
 
-  await Account.populate(aggResult, {
-    path: "operations.account",
-    select: "name",
-  });
-  await Contractor.populate(aggResult, {
-    path: "operations.contractor",
-    select: "name",
-  });
-  await Project.populate(aggResult, {
-    path: "operations.project",
-    select: "name",
-  });
-  console.log("2");
+  // await Account.populate(aggResult, {
+  //   path: "operations.account",
+  //   select: "name",
+  // });
+  // await Contractor.populate(aggResult, {
+  //   path: "operations.contractor",
+  //   select: "name",
+  // });
+  // await Project.populate(aggResult, {
+  //   path: "operations.project",
+  //   select: "name",
+  // });
 
   const emptyCategories = await getEmptyCategoryTransactions(
     businessId,
     countPlanned,
     queryData
   );
-  console.log("3");
+
   aggResult.push(emptyCategories);
 
   const report = getSkeletonForCategoryReport(queryData);
 
   constructReportByCategory(aggResult, report, queryData);
 
-  console.log("4");
-
   await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
   await Account.getMoneyInTheEnd(businessId, countPlanned, report);
-
-  console.log("5");
 
   calculateBalance(report);
 
