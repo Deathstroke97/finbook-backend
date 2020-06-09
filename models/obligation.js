@@ -24,7 +24,7 @@ const obligationSchema = new Schema(
     contractor: {
       type: Schema.Types.ObjectId,
       ref: "Contractor",
-      required: true,
+      // required: true,
     },
     currency: {
       type: String,

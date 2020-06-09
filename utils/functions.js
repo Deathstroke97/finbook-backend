@@ -1,5 +1,9 @@
 const moment = require("moment");
+const mongoose = require("mongoose");
+
 const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
+const Transaction = require("../models/transaction");
+const ObjectId = mongoose.Types.ObjectId;
 
 exports.populateWithBuckets = (queryData) => {
   let details = [];
@@ -31,4 +35,30 @@ exports.calculateBalance = (report) => {
       incomes.details[i].totalAmount - outcomes.details[i].totalAmount;
   }
   balance.total = incomes.total - outcomes.total;
+};
+
+exports.getSkeleton = (queryData) => {
+  const report = {
+    incomes: {
+      ...exports.populateWithBuckets(queryData),
+      categories: [],
+    },
+    outcomes: {
+      ...exports.populateWithBuckets(queryData),
+      categories: [],
+    },
+    balance: {
+      ...exports.populateWithBuckets(queryData),
+    },
+  };
+  return report;
+};
+
+exports.filterEmptyCategories = (report) => {
+  report.incomes.categories = report.incomes.categories.filter(
+    (category) => category.periods.total !== 0
+  );
+  report.outcomes.categories = report.outcomes.categories.filter(
+    (category) => category.periods.total !== 0
+  );
 };

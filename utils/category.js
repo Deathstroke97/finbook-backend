@@ -1,14 +1,18 @@
+const mongoose = require("mongoose");
 const moment = require("moment");
-
+const ObjectId = mongoose.Types.ObjectId;
 const {
   ACTIVITY_FINANCIAL,
   ACTIVITY_OPERATIONAL,
   ACTIVITY_INVESTMENT,
 } = require("../constants");
 
+const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
 const { INCOME, OUTCOME } = require("../constants");
 
-const { populateWithBuckets } = require("./functions");
+const { populateWithBuckets, getSkeleton } = require("./functions");
+
+const Transaction = require("../models/transaction");
 
 // Category Report Functions
 
@@ -33,46 +37,30 @@ exports.getSkeletonForCategoryReport = (queryData) => {
 
 // Activity Report Functions
 
-exports.getSkeletonForActivityReports = (queryData) => {
-  const report = {
-    incomes: {
-      ...populateWithBuckets(queryData),
-      categories: [],
-    },
-    outcomes: {
-      ...populateWithBuckets(queryData),
-      categories: [],
-    },
-    balance: {
-      ...populateWithBuckets(queryData),
-    },
-  };
-  return report;
-};
-
 exports.putCategoriesByActivity = (aggResult, queryData) => {
   const activities = {
     moneyInTheBeginning: populateWithBuckets(queryData),
     financial: {
       kind: ACTIVITY_FINANCIAL,
       categories: [],
-      report: exports.getSkeletonForActivityReports(queryData),
+      report: getSkeleton(queryData),
     },
     investment: {
       kind: ACTIVITY_INVESTMENT,
       categories: [],
-      report: exports.getSkeletonForActivityReports(queryData),
+      report: getSkeleton(queryData),
     },
     operational: {
       kind: ACTIVITY_OPERATIONAL,
       categories: [],
-      report: exports.getSkeletonForActivityReports(queryData),
+      report: getSkeleton(queryData),
     },
     moneyInTheEnd: populateWithBuckets(queryData),
   };
 
   aggResult.forEach((category) => {
-    const kind = category._id.kind;
+    const kind = category.kind;
+    // console.log("kind: ", kind);
 
     switch (kind) {
       case ACTIVITY_FINANCIAL:
@@ -85,16 +73,21 @@ exports.putCategoriesByActivity = (aggResult, queryData) => {
         activities.operational.categories.push(category);
         break;
       default:
+        // activities.operational.categories.push(category);
         break;
     }
   });
+
   return activities;
 };
 
 exports.constructReportByCategory = (array, report, queryData) => {
   array.forEach((category) => {
+    // console.log("category.name: ", category.name, "category: ", category);
     report.incomes.categories.push({
-      name: category._id.category,
+      // name: category._id.category,
+      categoryId: category._id.category,
+      name: category.name ? category.name : null,
       periods: populateWithBuckets(queryData),
       operations: [],
     });
@@ -121,7 +114,9 @@ exports.constructReportByCategory = (array, report, queryData) => {
     });
 
     report.outcomes.categories.push({
-      name: category._id.category,
+      categoryId: category._id.category,
+      name: category.name ? category.name : null,
+      // name: category._id.category,
       periods: populateWithBuckets(queryData),
       operations: [],
     });
@@ -148,11 +143,34 @@ exports.constructReportByCategory = (array, report, queryData) => {
   });
 };
 
-exports.filterEmptyCategories = (report) => {
-  report.incomes.categories = report.incomes.categories.filter(
-    (category) => category.periods.total !== 0
-  );
-  report.outcomes.categories = report.outcomes.categories.filter(
-    (category) => category.periods.total !== 0
-  );
+exports.getEmptyCategoryTransactions = async (
+  businessId,
+  countPlanned,
+  queryData
+) => {
+  const category = {
+    _id: {
+      category: null,
+    },
+    kind: ACTIVITY_OPERATIONAL,
+  };
+  const filterPlanned = countPlanned ? {} : { isPlanned: false };
+  const incomeOperations = await Transaction.find({
+    business: ObjectId(businessId),
+    ...filterPlanned,
+    date: queryData.createTime,
+    category: null,
+    type: OPERATION_INCOME,
+  });
+
+  const outcomeOperations = await Transaction.find({
+    business: ObjectId(businessId),
+    ...filterPlanned,
+    date: queryData.createTime,
+    category: null,
+    type: OPERATION_OUTCOME,
+  });
+  category.incomeOperations = incomeOperations;
+  category.outcomeOperations = outcomeOperations;
+  return category;
 };

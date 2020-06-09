@@ -1,10 +1,19 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
-const Project = require("./project");
-const moment = require("moment");
-const { populateWithBuckets, calculateBalance } = require("../utils/functions");
-const { getSkeletonForProjectReport } = require("../utils/project");
+const Account = require("./account");
+
+const {
+  calculateBalance,
+  filterEmptyCategories,
+} = require("../utils/functions");
+const {
+  getEmptyProjectTransactions,
+  getProjectsReport,
+  calculateProjectsBalance,
+} = require("../utils/project");
+
+const { constructReportByCategory } = require("../utils/category");
 
 const projectSchema = new Schema(
   {
@@ -28,7 +37,7 @@ const projectSchema = new Schema(
   { timestamps: true }
 );
 
-projectSchema.statics.getReportByProject = async function ({
+projectSchema.statics.generateReportByProject = async function ({
   businessId,
   countPlanned,
   queryData,
@@ -77,94 +86,103 @@ projectSchema.statics.getReportByProject = async function ({
         "transactions.accountBalance": 0,
       },
     },
-    {
-      $sort: { "transactions.date": 1 },
-    },
+    // {
+    //   $sort: { "transactions.date": 1 },
+    // },
     {
       $group: {
-        _id: { account: "$name" },
-        total: { $sum: "$transactions.amount" },
+        _id: {
+          project: "$_id",
+          category: {
+            _id: "$transactions.category",
+          },
+          projectName: "$name",
+        },
         operations: { $push: "$transactions" },
       },
     },
     {
+      $lookup: {
+        from: "categories",
+        localField: "_id.category._id",
+        foreignField: "_id",
+        as: "cat",
+      },
+    },
+    {
       $project: {
-        incomeOperations: {
+        "_id.categoryName": "$cat.name",
+        "_id.project": 1,
+        "_id.category": 1,
+        "_id.projectName": 1,
+        operations: 1,
+      },
+    },
+    {
+      $project: {
+        "category._id.category": "$_id.category._id",
+        "category.name": {
+          $arrayElemAt: ["$_id.categoryName", 0],
+        },
+        "category.incomeOperations": {
           $filter: {
             input: "$operations",
             as: "operation",
             cond: { $eq: ["$$operation.type", "income"] },
           },
         },
-        outcomeOperations: {
+        "category.outcomeOperations": {
           $filter: {
             input: "$operations",
             as: "operation",
             cond: { $eq: ["$$operation.type", "outcome"] },
           },
         },
+        categoryName: 1,
+      },
+    },
+    {
+      $project: {
+        "_id.categoryName": 0,
+        "_id.category": 0,
+      },
+    },
+    {
+      $group: {
+        _id: {
+          project: "$_id",
+        },
+        categories: {
+          $push: "$category",
+        },
       },
     },
   ]);
 
-  const report = getSkeletonForProjectReport(queryData);
+  const emptyProject = await getEmptyProjectTransactions(
+    businessId,
+    countPlanned,
+    queryData
+  );
+  aggResult.push(emptyProject);
 
-  aggResult.forEach((account) => {
-    report.incomes.accounts.push({
-      name: account._id.account,
-      periods: populateWithBuckets(queryData),
-    });
-
-    account.incomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-
-      const lastIndex = report.incomes.accounts.length - 1;
-
-      report.incomes.accounts[lastIndex].periods.details.forEach(
-        (period, index) => {
-          if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.incomes.total += +operation.amount;
-            report.incomes.details[index].totalAmount += +operation.amount;
-            report.incomes.accounts[
-              lastIndex
-            ].periods.total += +operation.amount;
-          }
-        }
-      );
-    });
-
-    report.outcomes.accounts.push({
-      name: account._id.account,
-      periods: populateWithBuckets(queryData),
-    });
-    account.outcomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-
-      const lastIndex = report.outcomes.accounts.length - 1;
-
-      report.outcomes.accounts[lastIndex].periods.details.forEach(
-        (period, index) => {
-          if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.outcomes.total += +operation.amount;
-            report.outcomes.details[index].totalAmount += +operation.amount;
-            report.outcomes.accounts[
-              lastIndex
-            ].periods.total += +operation.amount;
-          }
-        }
-      );
-    });
+  const mainReport = getProjectsReport(aggResult, queryData);
+  mainReport.projects.forEach((project) => {
+    constructReportByCategory(project.categories, project.report, queryData);
+  });
+  mainReport.projects.forEach((project) => {
+    calculateBalance(project.report);
+    filterEmptyCategories(project.report);
+    delete project.categories;
   });
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
-  calculateBalance(report);
+  await Account.getMoneyInTheBeginning(businessId, countPlanned, mainReport);
+  await Account.getMoneyInTheEnd(businessId, countPlanned, mainReport);
+  calculateProjectsBalance(mainReport);
 
-  return report;
+  return mainReport;
 };
 
-module.exports = mongoose.model("Project", projectSchema);
+const Project = mongoose.model("Project", projectSchema);
+
+module.exports = Project;

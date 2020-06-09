@@ -3,7 +3,10 @@ const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const moment = require("moment");
 const { populateWithBuckets, calculateBalance } = require("../utils/functions");
-const { getSkeletonForAccountReport } = require("../utils/account");
+const {
+  getSkeletonForAccountReport,
+  constructReportByAccount,
+} = require("../utils/account");
 
 const accountSchema = new Schema({
   name: {
@@ -203,56 +206,7 @@ accountSchema.statics.generateReportByAccounts = async function ({
 
   const report = getSkeletonForAccountReport(queryData);
 
-  aggResult.forEach((account) => {
-    report.incomes.accounts.push({
-      name: account._id.account,
-      periods: populateWithBuckets(queryData),
-    });
-
-    account.incomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-
-      const lastIndex = report.incomes.accounts.length - 1;
-
-      report.incomes.accounts[lastIndex].periods.details.forEach(
-        (period, index) => {
-          if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.incomes.total += +operation.amount;
-            report.incomes.details[index].totalAmount += +operation.amount;
-            report.incomes.accounts[
-              lastIndex
-            ].periods.total += +operation.amount;
-          }
-        }
-      );
-    });
-
-    report.outcomes.accounts.push({
-      name: account._id.account,
-      periods: populateWithBuckets(queryData),
-    });
-    account.outcomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
-
-      const lastIndex = report.outcomes.accounts.length - 1;
-
-      report.outcomes.accounts[lastIndex].periods.details.forEach(
-        (period, index) => {
-          if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.outcomes.total += +operation.amount;
-            report.outcomes.details[index].totalAmount += +operation.amount;
-            report.outcomes.accounts[
-              lastIndex
-            ].periods.total += +operation.amount;
-          }
-        }
-      );
-    });
-  });
+  constructReportByAccount(aggResult, report, queryData);
 
   await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
   await Account.getMoneyInTheEnd(businessId, countPlanned, report);

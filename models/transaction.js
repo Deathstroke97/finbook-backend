@@ -3,7 +3,7 @@ const moment = require("moment");
 
 const Schema = mongoose.Schema;
 const Obligation = require("./obligation");
-const Account = require("./account");
+
 const Contractor = require("./contractor");
 
 const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
@@ -91,15 +91,19 @@ const transactionSchema = new Schema(
 );
 
 transactionSchema.methods.attachObligation = async function () {
+  const Account = require("./account");
   const account = await Account.findById(this.account);
   const contractor = await Contractor.findById(this.contractor);
-  if (this.type === OPERATION_INCOME) {
-    contractor.balance = +contractor.balance + +this.amount;
+  if (contractor) {
+    if (this.type === OPERATION_INCOME) {
+      contractor.balance = +contractor.balance + +this.amount;
+    }
+    if (this.type === OPERATION_OUTCOME) {
+      contractor.balance = +contractor.balance - this.amount;
+    }
+    await contractor.save();
   }
-  if (this.type === OPERATION_OUTCOME) {
-    contractor.balance = +contractor.balance - this.amount;
-  }
-  await contractor.save();
+
   const obligation = new Obligation({
     business: this.business,
     date: this.date,
@@ -249,6 +253,7 @@ transactionSchema.statics.getRangeInAsc = async function (
 ) {
   try {
     const Transaction = mongoose.model("Transaction", transactionSchema);
+    const Account = require("./account");
     let startTransaction = await Transaction.find({
       business: businessId,
       account: accountId,
@@ -322,6 +327,7 @@ transactionSchema.statics.updateBalanceInRange = async function (range) {
 };
 
 transactionSchema.methods.updateTransactionsBalance = async function (diff) {
+  const Account = require("./account");
   try {
     const Transaction = mongoose.model("Transaction", transactionSchema);
 

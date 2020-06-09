@@ -11,10 +11,14 @@ const {
   putCategoriesByActivity,
   getSkeletonForCategoryReport,
   constructReportByCategory,
-  filterEmptyCategories,
+  getEmptyCategoryTransactions,
 } = require("../utils/category");
 
-const { populateWithBuckets, calculateBalance } = require("../utils/functions");
+const {
+  populateWithBuckets,
+  calculateBalance,
+  filterEmptyCategories,
+} = require("../utils/functions");
 
 const categorySchema = new Schema({
   name: {
@@ -96,13 +100,18 @@ categorySchema.statics.generateReportByCategory = async function ({
     },
     {
       $group: {
-        _id: { category: "$name", kind: "$kind", type: "$type" },
-        total: { $sum: "$transactions.amount" },
+        _id: { category: "$_id" },
+        kind: { $first: "$kind" },
+        type: { $first: "$type" },
+        name: { $first: "$name" },
         operations: { $push: "$transactions" },
       },
     },
     {
       $project: {
+        kind: 1,
+        type: 1,
+        name: 1,
         incomeOperations: {
           $filter: {
             input: "$operations",
@@ -120,26 +129,40 @@ categorySchema.statics.generateReportByCategory = async function ({
       },
     },
   ]);
+  console.log("1");
 
-  // await Account.populate(aggResult, {
-  //   path: "operations.account",
-  //   select: "name",
-  // });
-  // await Contractor.populate(aggResult, {
-  //   path: "operations.contractor",
-  //   select: "name",
-  // });
-  // await Project.populate(aggResult, {
-  //   path: "operations.project",
-  //   select: "name",
-  // });
+  await Account.populate(aggResult, {
+    path: "operations.account",
+    select: "name",
+  });
+  await Contractor.populate(aggResult, {
+    path: "operations.contractor",
+    select: "name",
+  });
+  await Project.populate(aggResult, {
+    path: "operations.project",
+    select: "name",
+  });
+  console.log("2");
+
+  const emptyCategories = await getEmptyCategoryTransactions(
+    businessId,
+    countPlanned,
+    queryData
+  );
+  console.log("3");
+  aggResult.push(emptyCategories);
 
   const report = getSkeletonForCategoryReport(queryData);
 
   constructReportByCategory(aggResult, report, queryData);
 
+  console.log("4");
+
   await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
   await Account.getMoneyInTheEnd(businessId, countPlanned, report);
+
+  console.log("5");
 
   calculateBalance(report);
 
@@ -200,17 +223,19 @@ categorySchema.statics.generateReportByActivity = async function ({
       },
     },
     {
-      $sort: { "transactions.date": 1 },
-    },
-    {
       $group: {
-        _id: { category: "$name", kind: "$kind", type: "$type" },
-        total: { $sum: "$transactions.amount" },
+        _id: { category: "$_id" },
+        kind: { $first: "$kind" },
+        type: { $first: "$type" },
+        name: { $first: "$name" },
         operations: { $push: "$transactions" },
       },
     },
     {
       $project: {
+        kind: 1,
+        type: 1,
+        name: 1,
         incomeOperations: {
           $filter: {
             input: "$operations",
@@ -228,6 +253,13 @@ categorySchema.statics.generateReportByActivity = async function ({
       },
     },
   ]);
+
+  const emptyCategories = await getEmptyCategoryTransactions(
+    businessId,
+    countPlanned,
+    queryData
+  );
+  aggResult.push(emptyCategories);
 
   const activities = putCategoriesByActivity(aggResult, queryData);
 
