@@ -58,9 +58,10 @@ accountSchema.statics.getMoneyInTheBeginning = async (
     let date = moment([year, month, 1]);
 
     let totalAmount = 0;
+    const transactions = [];
 
     for (let i = 0; i < accounts.length; i++) {
-      const transaction = await Transaction.find({
+      const transaction = Transaction.find({
         business: businessId,
         ...filterPlanned,
         account: accounts[i]._id,
@@ -68,17 +69,22 @@ accountSchema.statics.getMoneyInTheBeginning = async (
       })
         .sort({ date: -1, createdAt: -1 })
         .limit(1);
-
-      if (transaction.length > 0) {
-        accountBalance = parseFloat(transaction[0].accountBalance);
-        totalAmount += accountBalance;
-      } else {
-        if (date >= moment(accounts[i].initialBalanceDate)) {
-          totalAmount += +accounts[i].initialBalance;
+      transactions.push(transaction);
+    }
+    Promise.all(transactions).then((transactions) => {
+      for (let i = 0; i < transactions.length; i++) {
+        const transaction = transactions[i];
+        if (transaction.length > 0) {
+          accountBalance = parseFloat(transaction[0].accountBalance);
+          totalAmount += accountBalance;
+        } else {
+          if (date >= moment(accounts[i].initialBalanceDate)) {
+            totalAmount += +accounts[i].initialBalance;
+          }
         }
       }
-    }
-    array[i].totalAmount = totalAmount;
+      array[i].totalAmount = totalAmount;
+    });
   }
 };
 
@@ -98,9 +104,10 @@ accountSchema.statics.getMoneyInTheEnd = async (
     let date = moment([year, month, 1]).endOf("month");
 
     let totalAmount = 0;
+    const promises = [];
 
     for (let i = 0; i < accounts.length; i++) {
-      const transaction = await Transaction.find({
+      const transaction = Transaction.find({
         business: businessId,
         ...filterPlanned,
         account: accounts[i]._id,
@@ -108,7 +115,11 @@ accountSchema.statics.getMoneyInTheEnd = async (
       })
         .sort({ date: -1, createdAt: -1 })
         .limit(1);
-
+      promises.push(transaction);
+    }
+    const transactions = await Promise.all(promises);
+    for (let i = 0; i < transactions.length; i++) {
+      const transaction = transactions[i];
       if (transaction.length > 0) {
         accountBalance = parseFloat(transaction[0].accountBalance);
         totalAmount += accountBalance;

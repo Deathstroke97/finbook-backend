@@ -1,10 +1,6 @@
 const moment = require("moment");
 const mongoose = require("mongoose");
 
-const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
-const Transaction = require("../models/transaction");
-const ObjectId = mongoose.Types.ObjectId;
-
 exports.populateWithBuckets = (queryData) => {
   let details = [];
   let startDate = moment(queryData.createTime.$gte);
