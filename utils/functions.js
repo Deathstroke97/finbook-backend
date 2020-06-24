@@ -50,11 +50,26 @@ exports.getSkeleton = (queryData) => {
   return report;
 };
 
-exports.filterEmptyCategories = (report) => {
+exports.filterEmptyCategoriesCashFlow = (report) => {
   report.incomes.categories = report.incomes.categories.filter(
     (category) => category.periods.total !== 0
   );
   report.outcomes.categories = report.outcomes.categories.filter(
+    (category) => category.periods.total !== 0
+  );
+};
+
+exports.filterEmptyCategoriesProfitAndLoss = (report) => {
+  report.incomes.withProjects.categories = report.incomes.withProjects.categories.filter(
+    (category) => category.periods.total !== 0
+  );
+  report.incomes.withoutProjects.categories = report.incomes.withoutProjects.categories.filter(
+    (category) => category.periods.total !== 0
+  );
+  report.outcomes.withProjects.categories = report.outcomes.withProjects.categories.filter(
+    (category) => category.periods.total !== 0
+  );
+  report.outcomes.withoutProjects.categories = report.outcomes.withoutProjects.categories.filter(
     (category) => category.periods.total !== 0
   );
 };

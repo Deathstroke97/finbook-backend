@@ -34,7 +34,7 @@ const contractorSchema = new Schema(
   { timestamps: true }
 );
 
-contractorSchema.statics.generateReportByContractor = async function ({
+contractorSchema.statics.generateCashFlowByContractor = async function ({
   businessId,
   countPlanned,
   queryData,

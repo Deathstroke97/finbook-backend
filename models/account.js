@@ -136,7 +136,7 @@ accountSchema.statics.getMoneyInTheEnd = async (
   }
 };
 
-accountSchema.statics.generateReportByAccounts = async function ({
+accountSchema.statics.generateCashFlowByAccounts = async function ({
   businessId,
   countPlanned,
   queryData,

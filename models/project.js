@@ -37,7 +37,7 @@ const projectSchema = new Schema(
   { timestamps: true }
 );
 
-projectSchema.statics.generateReportByProject = async function ({
+projectSchema.statics.generateCashFlowByProject = async function ({
   businessId,
   countPlanned,
   queryData,

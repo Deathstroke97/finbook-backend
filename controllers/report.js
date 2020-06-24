@@ -11,28 +11,50 @@ const {
   PROJECT,
 } = require("../constants");
 
-exports.getCashFlow = async (req, res, next) => {
+exports.getCashFlowReport = async (req, res, next) => {
   const { businessId, queryData, reportBy } = req.body;
   let result = null;
   try {
     switch (reportBy) {
       case CATEGORY:
-        result = await Category.generateReportByCategory(req.body);
+        result = await Category.generateCashFlowByCategory(req.body);
         break;
       case ACTIVITY:
-        result = await Category.generateReportByActivity(req.body);
+        result = await Category.generateCashFlowByActivity(req.body);
         break;
       case ACCOUNT:
-        result = await Account.generateReportByAccounts(req.body);
+        result = await Account.generateCashFlowByAccounts(req.body);
         break;
       case CONTRACTOR:
-        result = await Contractor.generateReportByContractor(req.body);
+        result = await Contractor.generateCashFlowByContractor(req.body);
         break;
       case PROJECT:
-        result = await Project.generateReportByProject(req.body);
+        result = await Project.generateCashFlowByProject(req.body);
         break;
     }
+    res.status(200).json({
+      result: result,
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
 
+exports.getProfitAndLossReport = async (req, res, next) => {
+  const { businessId, queryData, reportBy, method } = req.body;
+  let result = null;
+  try {
+    switch (reportBy) {
+      case CATEGORY:
+        result = await Category.generateProfitAndLossByCategory(req.body);
+        break;
+      case PROJECT:
+        result = await Project.generateProfitAndLossByProject(req.body);
+        break;
+    }
     res.status(200).json({
       result: result,
     });
