@@ -339,35 +339,37 @@ exports.constructProfitAndLossByCategory = (aggResult, report, queryData) => {
   );
 };
 
-// exports.constructReportForSeparateCategories = (aggResult, queryData) => {
-//   let separateCategoriesIds = [
-//     "5ebecdab81f7e40ed8f8730a",
-//     "5eef32cbb903de06654362bc",
-//   ];
-//   let separateCategories = [];
-//   aggResult.forEach((result) => {
-//     const categoryId = result._id.category && result._id.category.toString();
-//     if (categoryId) {
-//       if (separateCategoriesIds.indexOf(categoryId) !== -1) {
-//         separateCategories.push(result);
-//       }
-//     }
-//   });
-//   const report = exports.getSkeletonForCategoryReport(queryData);
-//   exports.constructReportByCategory(separateCategories, report, queryData);
-//   delete report.moneyInTheBeginning;
-//   delete report.moneyInTheEnd;
-//   delete report.balance;
-//   delete report.incomes;
-//   report.outcomes.categories.forEach((cat) => delete cat.operations);
+exports.constructReportForSeparateCategories = (aggResult, queryData) => {
+  const separateCategoriesIds = [
+    "5ebecdab81f7e40ed8f8730a",
+    "5eef32cbb903de06654362bc",
+  ];
+  const separateCategories = [];
+  aggResult.forEach((result) => {
+    const categoryId =
+      result._id.category && result._id.category._id.toString();
+    if (categoryId) {
+      if (separateCategoriesIds.indexOf(categoryId) !== -1) {
+        separateCategories.push(result);
+      }
+    }
+  });
+  const report = exports.getSkeletonForCategoryReport(queryData);
+  exports.constructReportByCategory(separateCategories, report, queryData);
+  delete report.moneyInTheBeginning;
+  delete report.moneyInTheEnd;
+  delete report.balance;
+  delete report.incomes;
+  report.outcomes.categories.forEach((cat) => delete cat.operations);
 
-//   aggResult = aggResult.filter((result) => {
-//     const categoryId = result._id.category && result._id.category.toString();
-//     return separateCategoriesIds.indexOf(categoryId) === -1;
-//   });
+  aggResult = aggResult.filter((result) => {
+    const categoryId =
+      result._id.category && result._id.category._id.toString();
+    return separateCategoriesIds.indexOf(categoryId) === -1;
+  });
 
-//   return {
-//     aggResult,
-//     separateCategoriesReport: report,
-//   };
-// };
+  return {
+    aggResult,
+    separateCategoriesReport: report,
+  };
+};

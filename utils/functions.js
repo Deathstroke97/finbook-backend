@@ -1,6 +1,53 @@
 const moment = require("moment");
 const mongoose = require("mongoose");
 
+exports.populateTransactions = (aggResult) => {
+  const Account = require("../models/account");
+  const Category = require("../models/category");
+  const Contractor = require("../models/contractor");
+  const Project = require("../models/project");
+  const promises = [
+    Account.populate(aggResult, {
+      path: "incomeOperations.account",
+      select: "name",
+    }),
+    Account.populate(aggResult, {
+      path: "outcomeOperations.account",
+      select: "name",
+    }),
+
+    Category.populate(aggResult, {
+      path: "incomeOperations.category",
+      select: "name",
+    }),
+
+    Category.populate(aggResult, {
+      path: "outcomeOperations.category",
+      select: "name",
+    }),
+
+    Contractor.populate(aggResult, {
+      path: "incomeOperations.contractor",
+      select: "name",
+    }),
+
+    Contractor.populate(aggResult, {
+      path: "outcomeOperations.contractor",
+      select: "name",
+    }),
+
+    Project.populate(aggResult, {
+      path: "incomeOperations.project",
+      select: "name",
+    }),
+    Project.populate(aggResult, {
+      path: "outcomeOperations.project",
+      select: "name",
+    }),
+  ];
+  return Promise.all(promises);
+};
+
 exports.populateWithBuckets = (queryData) => {
   let details = [];
   let startDate = moment(queryData.createTime.$gte);

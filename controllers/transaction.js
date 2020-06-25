@@ -81,7 +81,7 @@ exports.createTransaction = async (req, res, next) => {
       amount: body.amount,
       account: body.account,
       description: body.description ? body.description : null,
-      relatedDate: body.relatedDate,
+      relatedDate: body.relatedDate ? body.relatedDate : body.date,
       isObligation: body.isObligation,
       accountBalance: accountBalance,
       isPeriodic: body.isPeriodic,

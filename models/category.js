@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const Account = require("./account");
 const ObjectId = mongoose.Types.ObjectId;
-
+const Contractor = require("./contractor");
+const Project = require("./project");
 const {
   putCategoriesByActivity,
   getSkeletonForCategoryReport,
@@ -11,14 +12,15 @@ const {
   getSkeletonForProfitAndLossByCategory,
   constructProfitAndLossByCategory,
   calculateOperatingProfit,
+  constructReportForSeparateCategories,
 } = require("../utils/category");
 
 const {
   calculateBalance,
   filterEmptyCategoriesCashFlow,
   filterEmptyCategoriesProfitAndLoss,
+  populateTransactions,
 } = require("../utils/functions");
-const { query } = require("express-validator");
 
 const categorySchema = new Schema({
   name: {
@@ -81,25 +83,6 @@ categorySchema.statics.generateCashFlowByCategory = async function ({
       },
     },
     {
-      $project: {
-        "transactions.isPlanned": 0,
-        "transactions.isPeriodic": 0,
-        "transactions.rootOfPeriodicChain": 0,
-        "transactions.isObligation": 0,
-
-        "transactions.business:": 0,
-        "transactions.contractor": 0,
-        "transactions.project": 0,
-        "transactions.account:": 0,
-        "transactions.createdAt": 0,
-        "transactions.updatedAt:": 0,
-        "transactions.accountBalance": 0,
-      },
-    },
-    {
-      $sort: { "transactions.date": 1 },
-    },
-    {
       $group: {
         _id: { category: "$_id" },
         kind: { $first: "$kind" },
@@ -131,29 +114,15 @@ categorySchema.statics.generateCashFlowByCategory = async function ({
     },
   ]);
 
-  // await Account.populate(aggResult, {
-  //   path: "operations.account",
-  //   select: "name",
-  // });
-  // await Contractor.populate(aggResult, {
-  //   path: "operations.contractor",
-  //   select: "name",
-  // });
-  // await Project.populate(aggResult, {
-  //   path: "operations.project",
-  //   select: "name",
-  // });
-
   const emptyCategories = await getEmptyCategoryTransactions(
     businessId,
     countPlanned,
     queryData
   );
-
   aggResult.push(emptyCategories);
+  await populateTransactions(aggResult);
 
   const report = getSkeletonForCategoryReport(queryData);
-
   constructReportByCategory(aggResult, report, queryData);
 
   await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
@@ -202,22 +171,6 @@ categorySchema.statics.generateCashFlowByActivity = async function ({
       },
     },
     {
-      $project: {
-        "transactions.isPlanned": 0,
-        "transactions.isPeriodic": 0,
-        "transactions.rootOfPeriodicChain": 0,
-        "transactions.isObligation": 0,
-
-        "transactions.business:": 0,
-        "transactions.contractor": 0,
-        "transactions.project": 0,
-        "transactions.account:": 0,
-        "transactions.createdAt": 0,
-        "transactions.updatedAt:": 0,
-        "transactions.accountBalance": 0,
-      },
-    },
-    {
       $group: {
         _id: { category: "$_id" },
         kind: { $first: "$kind" },
@@ -255,6 +208,7 @@ categorySchema.statics.generateCashFlowByActivity = async function ({
     queryData
   );
   aggResult.push(emptyCategories);
+  await populateTransactions(aggResult);
 
   const activities = putCategoriesByActivity(aggResult, queryData);
 
@@ -299,10 +253,6 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
 }) {
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
   const Transaction = require("./transaction");
-  const separateCategoriesIds = [
-    "5ebecdab81f7e40ed8f8730a",
-    "5eef32cbb903de06654362bc",
-  ];
 
   const aggResult = await Transaction.aggregate([
     {
@@ -311,12 +261,6 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
         date: {
           $gte: new Date(queryData.createTime.$gte),
           $lte: new Date(queryData.createTime.$lte),
-        },
-        category: {
-          $nin: [
-            ObjectId("5ebecdab81f7e40ed8f8730a"),
-            ObjectId("5eef32cbb903de06654362bc"),
-          ],
         },
         ...filterPlanned,
       },
@@ -350,96 +294,19 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
     },
   ]);
 
-  // const divided = constructReportForSeparateCategories(aggResult, queryData);
-  const separateCategoriesReport = await this.constructReportForSeparateCategories(
-    queryData,
-    countPlanned,
-    separateCategoriesIds
-  );
+  await this.populate(aggResult, {
+    path: "_id.category",
+    select: "name",
+  });
+
+  const divided = constructReportForSeparateCategories(aggResult, queryData);
 
   //separate categories's report ready, main report is next
   const report = getSkeletonForProfitAndLossByCategory(queryData);
-  constructProfitAndLossByCategory(aggResult, report, queryData);
+  constructProfitAndLossByCategory(divided.aggResult, report, queryData);
   filterEmptyCategoriesProfitAndLoss(report);
   calculateOperatingProfit(report);
-  report.separateCategoriesReport = separateCategoriesReport;
-  return report;
-};
-
-categorySchema.statics.constructReportForSeparateCategories = async (
-  queryData,
-  countPlanned,
-  separateCategoriesIds
-) => {
-  const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
-  const Category = mongoose.model("Category", categorySchema);
-  const seperateCategories = await Category.aggregate([
-    {
-      $match: {
-        $or: [
-          { _id: ObjectId(separateCategoriesIds[0]) },
-          { _id: ObjectId(separateCategoriesIds[1]) },
-        ],
-      },
-    },
-    {
-      $lookup: {
-        from: "transactions",
-        localField: "_id",
-        foreignField: "category",
-        as: "transactions",
-      },
-    },
-    {
-      $unwind: "$transactions",
-    },
-    {
-      $match: {
-        "transactions.date": {
-          $gte: new Date(queryData.createTime.$gte),
-          $lte: new Date(queryData.createTime.$lte),
-        },
-        ...filterPlanned,
-      },
-    },
-    {
-      $group: {
-        _id: { category: "$_id" },
-        name: { $first: "$name" },
-        operations: { $push: "$transactions" },
-      },
-    },
-    {
-      $project: {
-        name: 1,
-        incomeOperations: {
-          $filter: {
-            input: "$operations",
-            as: "operation",
-            cond: { $eq: ["$$operation.type", "income"] },
-          },
-        },
-        outcomeOperations: {
-          $filter: {
-            input: "$operations",
-            as: "operation",
-            cond: { $eq: ["$$operation.type", "outcome"] },
-          },
-        },
-      },
-    },
-  ]);
-
-  const report = getSkeletonForCategoryReport(queryData);
-
-  constructReportByCategory(seperateCategories, report, queryData);
-
-  delete report.moneyInTheBeginning;
-  delete report.moneyInTheEnd;
-  delete report.balance;
-  delete report.incomes;
-  report.outcomes.categories.forEach((cat) => delete cat.operations);
-
+  report.separateCategoriesReport = divided.separateCategoriesReport;
   return report;
 };
 
