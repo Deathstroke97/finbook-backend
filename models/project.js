@@ -5,7 +5,7 @@ const Account = require("./account");
 
 const {
   calculateBalance,
-  filterEmptyCategories,
+  filterEmptyCategoriesCashFlow,
 } = require("../utils/functions");
 const {
   getEmptyProjectTransactions,
@@ -179,7 +179,7 @@ projectSchema.statics.generateCashFlowByProject = async function ({
   });
   mainReport.projects.forEach((project) => {
     calculateBalance(project.report);
-    filterEmptyCategories(project.report);
+    filterEmptyCategoriesCashFlow(project.report);
     delete project.categories;
   });
 

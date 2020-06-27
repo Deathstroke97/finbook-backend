@@ -262,6 +262,12 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
           $gte: new Date(queryData.createTime.$gte),
           $lte: new Date(queryData.createTime.$lte),
         },
+        category: {
+          $nin: [
+            ObjectId("5ebecdab81f7e40ed8f8730a"),
+            ObjectId("5eef32cbb903de06654362bc"),
+          ],
+        },
         ...filterPlanned,
       },
     },
@@ -299,24 +305,20 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
     select: "name",
   });
 
-  const divided = constructReportForSeparateCategories(
-    aggResult,
+  const separateCategoriesReport = await this.constructReportForSeparateCategories(
     queryData,
+    countPlanned,
     method
   );
-  // return divided.separateCategoriesReport;
 
   //separate categories's report ready, main report is next
+
   const report = getSkeletonForProfitAndLossByCategory(queryData);
-  constructProfitAndLossByCategory(
-    divided.aggResult,
-    report,
-    queryData,
-    method
-  );
+
+  constructProfitAndLossByCategory(aggResult, report, queryData, method);
   filterEmptyCategoriesProfitAndLoss(report);
   calculateOperatingProfit(report);
-  report.separateCategoriesReport = divided.separateCategoriesReport;
+  report.separateCategoriesReport = separateCategoriesReport;
   return report;
 };
 
