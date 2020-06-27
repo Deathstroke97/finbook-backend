@@ -1,7 +1,9 @@
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
+const moment = require("moment");
 const Transaction = require("../models/transaction");
 const { populateWithBuckets, getSkeleton } = require("./functions");
+const constants = require("../constants");
 
 exports.getSkeletonForProjectReport = (queryData) => {
   const report = {
@@ -135,3 +137,169 @@ exports.calculateProjectsBalance = (report) => {
     report.balance.total += period.totalAmount;
   });
 };
+
+exports.getSkeletonForProfitAndLossByProject = (queryData) => {
+  const report = {
+    incomes: {
+      withProjects: {
+        ...populateWithBuckets(queryData),
+        projects: [],
+      },
+      withoutProjects: {
+        ...populateWithBuckets(queryData),
+        projects: [],
+      },
+    },
+    outcomes: {
+      withProjects: {
+        ...populateWithBuckets(queryData),
+        projects: [],
+      },
+      withoutProjects: {
+        ...populateWithBuckets(queryData),
+        projects: [],
+      },
+    },
+    operatingProfit: {
+      ...populateWithBuckets(queryData),
+    },
+    operatingProfitability: {
+      ...populateWithBuckets(queryData),
+    },
+  };
+  return report;
+};
+
+const helperProfitAndLossByProject = (
+  array,
+  report,
+  type,
+  queryData,
+  method
+) => {
+  array.forEach((project) => {
+    report.projects.push({
+      projectId: project._id.project,
+      name: project.name ? project.name : null,
+      periods: populateWithBuckets(queryData),
+    });
+
+    if (type === constants.INCOME) {
+      project.incomeOperations.forEach((operation) => {
+        let opMonth;
+        let opYear;
+
+        if (method == undefined || method === constants.METHOD_CASH) {
+          opMonth = moment(operation.date).month();
+          opYear = moment(operation.date).year();
+        }
+        if (method === constants.METHOD_ACCRUAL) {
+          opMonth = moment(operation.relatedDate).month();
+          opYear = moment(operation.relatedDate).year();
+        }
+
+        const lastIndex = report.projects.length - 1;
+
+        report.projects[lastIndex].periods.details.forEach((period, index) => {
+          if (period.month == opMonth && period.year == opYear) {
+            period.totalAmount += +operation.amount;
+            report.total += +operation.amount;
+            report.details[index].totalAmount += +operation.amount;
+            report.projects[lastIndex].periods.total += +operation.amount;
+          }
+        });
+      });
+    }
+
+    if (type === constants.OUTCOME) {
+      project.outcomeOperations.forEach((operation) => {
+        let opMonth;
+        let opYear;
+
+        if (method == undefined || method === constants.METHOD_CASH) {
+          opMonth = moment(operation.date).month();
+          opYear = moment(operation.date).year();
+        }
+        if (method === constants.METHOD_ACCRUAL) {
+          opMonth = moment(operation.relatedDate).month();
+          opYear = moment(operation.relatedDate).year();
+        }
+
+        const lastIndex = report.projects.length - 1;
+
+        report.projects[lastIndex].periods.details.forEach((period, index) => {
+          if (period.month == opMonth && period.year == opYear) {
+            period.totalAmount += +operation.amount;
+            report.total += +operation.amount;
+            report.details[index].totalAmount += +operation.amount;
+            report.projects[lastIndex].periods.total += +operation.amount;
+          }
+        });
+      });
+    }
+  });
+};
+
+const constructProfitAndLossByProject = (
+  aggResult,
+  report,
+  queryData,
+  method
+) => {
+  const transformed = {
+    withProjects: [],
+    withoutProjects: [],
+  };
+
+  aggResult.forEach((result) => {
+    if (result._id.project !== null) {
+      transformed.withProjects.push({
+        _id: {
+          project: result._id.project,
+        },
+        incomeOperations: result.incomeOperations,
+        outcomeOperations: result.outcomeOperations,
+      });
+    }
+    if (result._id.project == null) {
+      transformed.withoutProjects.push({
+        _id: {
+          project: result._id.project,
+        },
+        incomeOperations: result.incomeOperations,
+        outcomeOperations: result.outcomeOperations,
+      });
+    }
+  });
+
+  helperProfitAndLossByProject(
+    transformed.withProjects,
+    report.incomes.withProjects,
+    constants.INCOME,
+    queryData,
+    method
+  );
+  helperProfitAndLossByProject(
+    transformed.withoutProjects,
+    report.incomes.withoutProjects,
+    constants.INCOME,
+    queryData,
+    method
+  );
+  helperProfitAndLossByProject(
+    transformed.withProjects,
+    report.outcomes.withProjects,
+    constants.OUTCOME,
+    queryData,
+    method
+  );
+  helperProfitAndLossByProject(
+    transformed.withoutProjects,
+    report.outcomes.withoutProjects,
+    constants.OUTCOME,
+    queryData,
+    method
+  );
+};
+
+exports.constructProfitAndLossByProject = constructProfitAndLossByProject;

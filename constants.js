@@ -1,26 +1,31 @@
-module.exports.ACTIVITY_FINANCIAL = 1;
-module.exports.ACTIVITY_INVESTMENT = 2;
-module.exports.ACTIVITY_OPERATIONAL = 3;
+module.exports = Object.freeze({
+  ACTIVITY_FINANCIAL: 1,
+  ACTIVITY_INVESTMENT: 2,
+  ACTIVITY_OPERATIONAL: 3,
 
-module.exports.OPERATION_INCOME = "income";
-module.exports.OPERATION_OUTCOME = "outcome";
+  OPERATION_INCOME: "income",
+  OPERATION_OUTCOME: "outcome",
 
-module.exports.COMPLETED = "completed";
-module.exports.PLANNED = "planned";
-module.exports.ALL = "all";
+  COMPLETED: "completed",
+  PLANNED: "planned",
+  ALL: "all",
 
-module.exports.PERIOD_WEEK = "week";
-module.exports.PERIOD_MONTH = "month";
-module.exports.PERIOD_TWO_MONTH = "twoMonth";
-module.exports.PERIOD_QUARTER = "quarter";
-module.exports.PERIOD_HALF_YEAR = "halfYear";
-module.exports.PERIOD_YEAR = "year";
+  PERIOD_WEEK: "week",
+  PERIOD_MONTH: "month",
+  PERIOD_TWO_MONTH: "twoMonth",
+  PERIOD_QUARTER: "quarter",
+  PERIOD_HALF_YEAR: "halfYear",
+  PERIOD_YEAR: "year",
 
-module.exports.CATEGORY = "category";
-module.exports.ACTIVITY = "activity";
-module.exports.ACCOUNT = "account";
-module.exports.CONTRACTOR = "contractor";
-module.exports.PROJECT = "project";
+  CATEGORY: "category",
+  ACTIVITY: "activity",
+  ACCOUNT: "account",
+  CONTRACTOR: "contractor",
+  PROJECT: "project",
 
-module.exports.INCOME = 1;
-module.exports.OUTCOME = 2;
+  METHOD_ACCRUAL: "accrual",
+  METHOD_CASH: "cash",
+
+  INCOME: 1,
+  OUTCOME: 2,
+});

@@ -1,26 +1,13 @@
 const mongoose = require("mongoose");
 const moment = require("moment");
 const ObjectId = mongoose.Types.ObjectId;
-const {
-  ACTIVITY_FINANCIAL,
-  ACTIVITY_OPERATIONAL,
-  ACTIVITY_INVESTMENT,
-} = require("../constants");
 
-const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
-const { INCOME, OUTCOME } = require("../constants");
-
-const {
-  populateWithBuckets,
-  getSkeleton,
-  filterEmptyCategoriesCashFlow,
-} = require("./functions");
+const constants = require("../constants");
+const { populateWithBuckets, getSkeleton } = require("./functions");
 
 const Transaction = require("../models/transaction");
 
-// Category Report Functions
-
-exports.getSkeletonForCategoryReport = (queryData) => {
+const getSkeletonForCategoryReport = (queryData) => {
   const report = {
     moneyInTheBeginning: populateWithBuckets(queryData),
     incomes: {
@@ -39,23 +26,21 @@ exports.getSkeletonForCategoryReport = (queryData) => {
   return report;
 };
 
-// Activity Report Functions
-
-exports.putCategoriesByActivity = (aggResult, queryData) => {
+const putCategoriesByActivity = (aggResult, queryData) => {
   const activities = {
     moneyInTheBeginning: populateWithBuckets(queryData),
     financial: {
-      kind: ACTIVITY_FINANCIAL,
+      kind: constants.ACTIVITY_FINANCIAL,
       categories: [],
       report: getSkeleton(queryData),
     },
     investment: {
-      kind: ACTIVITY_INVESTMENT,
+      kind: constants.ACTIVITY_INVESTMENT,
       categories: [],
       report: getSkeleton(queryData),
     },
     operational: {
-      kind: ACTIVITY_OPERATIONAL,
+      kind: constants.ACTIVITY_OPERATIONAL,
       categories: [],
       report: getSkeleton(queryData),
     },
@@ -66,13 +51,13 @@ exports.putCategoriesByActivity = (aggResult, queryData) => {
     const kind = category.kind;
 
     switch (kind) {
-      case ACTIVITY_FINANCIAL:
+      case constants.ACTIVITY_FINANCIAL:
         activities.financial.categories.push(category);
         break;
-      case ACTIVITY_INVESTMENT:
+      case constants.ACTIVITY_INVESTMENT:
         activities.investment.categories.push(category);
         break;
-      case ACTIVITY_OPERATIONAL:
+      case constants.ACTIVITY_OPERATIONAL:
         activities.operational.categories.push(category);
         break;
       default:
@@ -80,11 +65,10 @@ exports.putCategoriesByActivity = (aggResult, queryData) => {
         break;
     }
   });
-
   return activities;
 };
 
-exports.constructReportByCategory = (array, report, queryData) => {
+const constructReportByCategory = (array, report, queryData, method) => {
   array.forEach((category) => {
     report.incomes.categories.push({
       categoryId: category._id.category,
@@ -94,8 +78,17 @@ exports.constructReportByCategory = (array, report, queryData) => {
     });
     //buckets are ready for this category, time to put data
     category.incomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
+      let opMonth;
+      let opYear;
+
+      if (method == undefined || method === constants.METHOD_CASH) {
+        opMonth = moment(operation.date).month();
+        opYear = moment(operation.date).year();
+      }
+      if (method === constants.METHOD_ACCRUAL) {
+        opMonth = moment(operation.relatedDate).month();
+        opYear = moment(operation.relatedDate).year();
+      }
 
       const lastIndex = report.incomes.categories.length - 1;
 
@@ -122,8 +115,17 @@ exports.constructReportByCategory = (array, report, queryData) => {
     });
     //buckets are ready for this category, time to put data
     category.outcomeOperations.forEach((operation) => {
-      let opMonth = moment(operation.date).month();
-      let opYear = moment(operation.date).year();
+      let opMonth;
+      let opYear;
+
+      if (method == undefined || method === constants.METHOD_CASH) {
+        opMonth = moment(operation.date).month();
+        opYear = moment(operation.date).year();
+      }
+      if (method === constants.METHOD_ACCRUAL) {
+        opMonth = moment(operation.relatedDate).month();
+        opYear = moment(operation.relatedDate).year();
+      }
 
       const lastIndex = report.outcomes.categories.length - 1;
 
@@ -144,7 +146,7 @@ exports.constructReportByCategory = (array, report, queryData) => {
   });
 };
 
-exports.getEmptyCategoryTransactions = async (
+const getEmptyCategoryTransactions = async (
   businessId,
   countPlanned,
   queryData
@@ -153,7 +155,7 @@ exports.getEmptyCategoryTransactions = async (
     _id: {
       category: null,
     },
-    kind: ACTIVITY_OPERATIONAL,
+    kind: constants.ACTIVITY_OPERATIONAL,
   };
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
   const incomeOperations = await Transaction.find({
@@ -161,7 +163,7 @@ exports.getEmptyCategoryTransactions = async (
     ...filterPlanned,
     date: queryData.createTime,
     category: null,
-    type: OPERATION_INCOME,
+    type: constants.OPERATION_INCOME,
   });
 
   const outcomeOperations = await Transaction.find({
@@ -169,14 +171,14 @@ exports.getEmptyCategoryTransactions = async (
     ...filterPlanned,
     date: queryData.createTime,
     category: null,
-    type: OPERATION_OUTCOME,
+    type: constants.OPERATION_OUTCOME,
   });
   category.incomeOperations = incomeOperations;
   category.outcomeOperations = outcomeOperations;
   return category;
 };
 
-exports.getSkeletonForProfitAndLossByCategory = (queryData) => {
+const getSkeletonForProfitAndLossByCategory = (queryData) => {
   const report = {
     incomes: {
       withProjects: {
@@ -208,7 +210,7 @@ exports.getSkeletonForProfitAndLossByCategory = (queryData) => {
   return report;
 };
 
-exports.calculateOperatingProfit = (report) => {
+const calculateOperatingProfit = (report) => {
   const { incomes, outcomes, operatingProfit, operatingProfitability } = report;
 
   for (let i = 0; i < operatingProfit.details.length; i++) {
@@ -238,7 +240,13 @@ exports.calculateOperatingProfit = (report) => {
   operatingProfitability.total = (totalBalance * 100) / totalIncome;
 };
 
-exports.helperProfitAndLossByCategory = (array, report, type, queryData) => {
+const helperProfitAndLossByCategory = (
+  array,
+  report,
+  type,
+  queryData,
+  method
+) => {
   array.forEach((category) => {
     report.categories.push({
       categoryId: category._id.category,
@@ -246,10 +254,19 @@ exports.helperProfitAndLossByCategory = (array, report, type, queryData) => {
       periods: populateWithBuckets(queryData),
     });
 
-    if (type === INCOME) {
+    if (type === constants.INCOME) {
       category.incomeOperations.forEach((operation) => {
-        let opMonth = moment(operation.date).month();
-        let opYear = moment(operation.date).year();
+        let opMonth;
+        let opYear;
+
+        if (method == undefined || method === constants.METHOD_CASH) {
+          opMonth = moment(operation.date).month();
+          opYear = moment(operation.date).year();
+        }
+        if (method === constants.METHOD_ACCRUAL) {
+          opMonth = moment(operation.relatedDate).month();
+          opYear = moment(operation.relatedDate).year();
+        }
 
         const lastIndex = report.categories.length - 1;
 
@@ -265,10 +282,20 @@ exports.helperProfitAndLossByCategory = (array, report, type, queryData) => {
         );
       });
     }
-    if (type === OUTCOME) {
+
+    if (type === constants.OUTCOME) {
       category.outcomeOperations.forEach((operation) => {
-        let opMonth = moment(operation.date).month();
-        let opYear = moment(operation.date).year();
+        let opMonth;
+        let opYear;
+
+        if (method == undefined || method === constants.METHOD_CASH) {
+          opMonth = moment(operation.date).month();
+          opYear = moment(operation.date).year();
+        }
+        if (method === constants.METHOD_ACCRUAL) {
+          opMonth = moment(operation.relatedDate).month();
+          opYear = moment(operation.relatedDate).year();
+        }
 
         const lastIndex = report.categories.length - 1;
 
@@ -287,7 +314,12 @@ exports.helperProfitAndLossByCategory = (array, report, type, queryData) => {
   });
 };
 
-exports.constructProfitAndLossByCategory = (aggResult, report, queryData) => {
+const constructProfitAndLossByCategory = (
+  aggResult,
+  report,
+  queryData,
+  method
+) => {
   const transformed = {
     withProjects: [],
     withoutProjects: [],
@@ -313,33 +345,38 @@ exports.constructProfitAndLossByCategory = (aggResult, report, queryData) => {
       });
     }
   });
-  exports.helperProfitAndLossByCategory(
+
+  helperProfitAndLossByCategory(
     transformed.withProjects,
     report.incomes.withProjects,
-    INCOME,
-    queryData
+    constants.INCOME,
+    queryData,
+    method
   );
-  exports.helperProfitAndLossByCategory(
+  helperProfitAndLossByCategory(
     transformed.withoutProjects,
     report.incomes.withoutProjects,
-    INCOME,
-    queryData
+    constants.INCOME,
+    queryData,
+    method
   );
-  exports.helperProfitAndLossByCategory(
+  helperProfitAndLossByCategory(
     transformed.withProjects,
     report.outcomes.withProjects,
-    OUTCOME,
-    queryData
+    constants.OUTCOME,
+    queryData,
+    method
   );
-  exports.helperProfitAndLossByCategory(
+  helperProfitAndLossByCategory(
     transformed.withoutProjects,
     report.outcomes.withoutProjects,
-    OUTCOME,
-    queryData
+    constants.OUTCOME,
+    queryData,
+    method
   );
 };
 
-exports.constructReportForSeparateCategories = (aggResult, queryData) => {
+const constructReportForSeparateCategories = (aggResult, queryData, method) => {
   const separateCategoriesIds = [
     "5ebecdab81f7e40ed8f8730a",
     "5eef32cbb903de06654362bc",
@@ -354,8 +391,10 @@ exports.constructReportForSeparateCategories = (aggResult, queryData) => {
       }
     }
   });
-  const report = exports.getSkeletonForCategoryReport(queryData);
-  exports.constructReportByCategory(separateCategories, report, queryData);
+
+  const report = getSkeletonForCategoryReport(queryData);
+  constructReportByCategory(separateCategories, report, queryData, method);
+
   delete report.moneyInTheBeginning;
   delete report.moneyInTheEnd;
   delete report.balance;
@@ -373,3 +412,12 @@ exports.constructReportForSeparateCategories = (aggResult, queryData) => {
     separateCategoriesReport: report,
   };
 };
+
+exports.getSkeletonForCategoryReport = getSkeletonForCategoryReport;
+exports.putCategoriesByActivity = putCategoriesByActivity;
+exports.constructReportByCategory = constructReportByCategory;
+exports.getEmptyCategoryTransactions = getEmptyCategoryTransactions;
+exports.getSkeletonForProfitAndLossByCategory = getSkeletonForProfitAndLossByCategory;
+exports.calculateOperatingProfit = calculateOperatingProfit;
+exports.constructProfitAndLossByCategory = constructProfitAndLossByCategory;
+exports.constructReportForSeparateCategories = constructReportForSeparateCategories;

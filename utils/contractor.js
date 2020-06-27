@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const moment = require("moment");
 const ObjectId = mongoose.Types.ObjectId;
 
-const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
+const constants = require("../constants");
 
 const { populateWithBuckets } = require("./functions");
 
@@ -97,7 +97,7 @@ exports.getEmptyContractorTransactions = async (
     ...filterPlanned,
     date: queryData.createTime,
     contractor: null,
-    type: OPERATION_INCOME,
+    type: constants.OPERATION_INCOME,
   });
 
   const outcomeOperations = await Transaction.find({
@@ -105,7 +105,7 @@ exports.getEmptyContractorTransactions = async (
     ...filterPlanned,
     date: queryData.createTime,
     contractor: null,
-    type: OPERATION_OUTCOME,
+    type: constants.OPERATION_OUTCOME,
   });
   contractor.incomeOperations = incomeOperations;
   contractor.outcomeOperations = outcomeOperations;

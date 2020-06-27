@@ -11,9 +11,16 @@ const {
   getEmptyProjectTransactions,
   getProjectsReport,
   calculateProjectsBalance,
+  getSkeletonForProfitAndLossByProject,
+  constructProfitAndLossByProject,
 } = require("../utils/project");
 
-const { constructReportByCategory } = require("../utils/category");
+const {
+  constructReportByCategory,
+  calculateOperatingProfit,
+} = require("../utils/category");
+
+const Category = require("./category");
 
 const projectSchema = new Schema(
   {
@@ -181,6 +188,81 @@ projectSchema.statics.generateCashFlowByProject = async function ({
   calculateProjectsBalance(mainReport);
 
   return mainReport;
+};
+
+projectSchema.statics.generateProfitAndLossByProject = async function ({
+  businessId,
+  queryData,
+  countPlanned,
+  method,
+}) {
+  const filterPlanned = countPlanned ? {} : { isPlanned: false };
+  const Transaction = require("./transaction");
+
+  const aggResult = await Transaction.aggregate([
+    {
+      $match: {
+        business: ObjectId(businessId),
+        date: {
+          $gte: new Date(queryData.createTime.$gte),
+          $lte: new Date(queryData.createTime.$lte),
+        },
+        category: {
+          $nin: [
+            ObjectId("5ebecdab81f7e40ed8f8730a"),
+            ObjectId("5eef32cbb903de06654362bc"),
+          ],
+        },
+        ...filterPlanned,
+      },
+    },
+    {
+      $group: {
+        _id: {
+          project: "$project",
+        },
+        operations: { $push: "$$ROOT" },
+      },
+    },
+    {
+      $project: {
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
+  ]);
+
+  await this.populate(aggResult, {
+    path: "_id.project",
+    select: "name",
+  });
+
+  const separateCategoriesReport = await Category.constructReportForSeparateCategories(
+    queryData,
+    countPlanned,
+    method
+  );
+
+  //separate categories's report ready, main report is next
+
+  const report = getSkeletonForProfitAndLossByProject(queryData);
+  constructProfitAndLossByProject(aggResult, report, queryData, method);
+
+  calculateOperatingProfit(report);
+  report.separateCategoriesReport = separateCategoriesReport;
+  return report;
 };
 
 const Project = mongoose.model("Project", projectSchema);

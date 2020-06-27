@@ -3,8 +3,8 @@ const Transaction = require("../models/transaction");
 const Account = require("../models/account");
 const Obligation = require("../models/obligation");
 const Contractor = require("../models/contractor");
-const { COMPLETED, PLANNED } = require("../constants");
-const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
+
+const constants = require("../constants");
 
 exports.getTransactions = async (req, res, next) => {
   const {
@@ -28,8 +28,8 @@ exports.getTransactions = async (req, res, next) => {
     if (account) query.account = account;
     if (contractor) query.contractor = contractor;
     if (project) query.project = project;
-    if (status == COMPLETED) query.isPlanned = false;
-    if (status == PLANNED) query.isPlanned = true;
+    if (status == constants.COMPLETED) query.isPlanned = false;
+    if (status == constants.PLANNED) query.isPlanned = true;
 
     const transactions = await Transaction.find(query)
       .populate("account")
@@ -66,7 +66,9 @@ exports.createTransaction = async (req, res, next) => {
     }
 
     const accountBalance =
-      type === OPERATION_INCOME ? amountLast + +amount : amountLast - amount;
+      type === constants.OPERATION_INCOME
+        ? amountLast + +amount
+        : amountLast - amount;
 
     const isPlanned = moment(date) > moment() ? true : false;
 
@@ -92,10 +94,12 @@ exports.createTransaction = async (req, res, next) => {
     await transaction.updateTransactionsBalanceOnCreate();
 
     if (!isPlanned) {
-      acc.balance =
-        type == OPERATION_INCOME
-          ? +acc.balance + +amount
-          : +acc.balance - amount;
+      if (type === constants.OPERATION_INCOME) {
+        acc.balance = +acc.balance + +amount;
+      }
+      if (type === constants.OPERATION_OUTCOME) {
+        acc.balance = +acc.balance - amount;
+      }
       await acc.save();
       if (body.isObligation) {
         await transaction.attachObligation();
@@ -179,10 +183,10 @@ exports.updateTransaction = async (req, res, next) => {
       } else {
         if (!transaction.isPlanned) {
           const contractor = await Contractor.findById(body.contractor);
-          if (transaction.type === OPERATION_INCOME) {
+          if (transaction.type === constants.OPERATION_INCOME) {
             contractor.balance = +contractor.balance - transaction.amount;
           }
-          if (transaction.type === OPERATION_OUTCOME) {
+          if (transaction.type === constants.OPERATION_OUTCOME) {
             contractor.balance = +contractor.balance + +transaction.amount;
           }
           await contractor.save();
@@ -222,33 +226,39 @@ exports.updateTransaction = async (req, res, next) => {
 
 exports.deleteTransaction = async (req, res, next) => {
   const transactionId = req.params.transactionId;
+  const body = req.body;
   try {
     const transaction = await Transaction.findById(transactionId);
 
-    if (transaction.isObligation && !transaction.isPlanned) {
-      const contractor = await Contractor.findById(body.contractor);
-      if (transaction.type === OPERATION_INCOME) {
-        contractor.balance = +contractor.balance - transaction.amount;
+    if (transaction) {
+      if (transaction.isObligation && !transaction.isPlanned) {
+        const contractor = await Contractor.findById(transaction.contractor);
+        if (contractor) {
+          if (transaction.type === constants.OPERATION_INCOME) {
+            contractor.balance = +contractor.balance - transaction.amount;
+          }
+          if (transaction.type === constants.OPERATION_OUTCOME) {
+            contractor.balance = +contractor.balance + +transaction.amount;
+          }
+          await contractor.save();
+          await Obligation.findByIdAndRemove(transaction.obligationId);
+        }
       }
-      if (transaction.type === OPERATION_OUTCOME) {
-        contractor.balance = +contractor.balance + +transaction.amount;
-      }
-      await contractor.save();
-      await Obligation.findByIdAndRemove(transaction.obligationId);
-    }
 
-    if (!transaction.isPlanned) {
-      const account = await Account.findById(transaction.account);
-      if (transaction.type === OPERATION_INCOME) {
-        account.balance = +account.balance - transaction.amount;
-      } else {
-        account.balance = +account.balance + +transaction.amount;
+      if (!transaction.isPlanned) {
+        const account = await Account.findById(transaction.account);
+        if (transaction.type === constants.OPERATION_INCOME) {
+          account.balance = +account.balance - transaction.amount;
+        }
+        if (transaction.type === constants.OPERATION_OUTCOME) {
+          account.balance = +account.balance + +transaction.amount;
+        }
+        await account.save();
       }
-      await account.save();
+      const diff = 0 - transaction.amount;
+      await transaction.updateTransactionsBalance(diff);
+      await Transaction.findByIdAndRemove(transactionId);
     }
-    const diff = 0 - transaction.amount;
-    await transaction.updateTransactionsBalance(diff);
-    await Transaction.findByIdAndRemove(transactionId);
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;

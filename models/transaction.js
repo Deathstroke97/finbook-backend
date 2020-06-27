@@ -6,15 +6,7 @@ const Obligation = require("./obligation");
 
 const Contractor = require("./contractor");
 
-const { OPERATION_INCOME, OPERATION_OUTCOME } = require("../constants");
-const {
-  PERIOD_WEEK,
-  PERIOD_MONTH,
-  PERIOD_TWO_MONTH,
-  PERIOD_QUARTER,
-  PERIOD_HALF_YEAR,
-  PERIOD_YEAR,
-} = require("../constants");
+const constants = require("../constants");
 
 const transactionSchema = new Schema(
   {
@@ -92,13 +84,15 @@ const transactionSchema = new Schema(
 
 transactionSchema.methods.attachObligation = async function () {
   const Account = require("./account");
+
   const account = await Account.findById(this.account);
   const contractor = await Contractor.findById(this.contractor);
+
   if (contractor) {
-    if (this.type === OPERATION_INCOME) {
+    if (this.type === constants.OPERATION_INCOME) {
       contractor.balance = +contractor.balance + +this.amount;
     }
-    if (this.type === OPERATION_OUTCOME) {
+    if (this.type === constants.OPERATION_OUTCOME) {
       contractor.balance = +contractor.balance - this.amount;
     }
     await contractor.save();
@@ -108,7 +102,7 @@ transactionSchema.methods.attachObligation = async function () {
     business: this.business,
     date: this.date,
     amount: this.amount,
-    type: this.type == OPERATION_INCOME ? "in" : "out",
+    type: this.type == constants.OPERATION_INCOME ? "in" : "out",
     contractor: this.contractor,
     currency: account.currency,
     transaction: this._id,
@@ -124,22 +118,22 @@ transactionSchema.methods.addPeriodicChain = async function (account) {
   let period = "";
   let actualAccountBalance = +account.balance;
   switch (this.period) {
-    case PERIOD_WEEK:
+    case constants.PERIOD_WEEK:
       period = moment.duration(7, "days").valueOf();
       break;
-    case PERIOD_MONTH:
+    case constants.PERIOD_MONTH:
       period = moment.duration(1, "month").valueOf();
       break;
-    case PERIOD_TWO_MONTH:
+    case constants.PERIOD_TWO_MONTH:
       period = moment.duration(2, "months").valueOf();
       break;
-    case PERIOD_QUARTER:
+    case constants.PERIOD_QUARTER:
       period = moment.duration(1, "quarter").valueOf();
       break;
-    case PERIOD_HALF_YEAR:
+    case constants.PERIOD_HALF_YEAR:
       period = moment.duration(6, "months").valueOf();
       break;
-    case PERIOD_YEAR:
+    case constants.PERIOD_YEAR:
       period = moment.duration(1, "year").valueOf();
       break;
   }
@@ -154,7 +148,7 @@ transactionSchema.methods.addPeriodicChain = async function (account) {
         .limit(1);
       const amountLast = parseFloat(lastTransaction[0].accountBalance);
       const accountBalance =
-        this.type === OPERATION_INCOME
+        this.type === constants.OPERATION_INCOME
           ? amountLast + +this.amount
           : amountLast - this.amount;
 
@@ -183,7 +177,7 @@ transactionSchema.methods.addPeriodicChain = async function (account) {
         }
 
         actualAccountBalance =
-          this.type == OPERATION_INCOME
+          this.type == constants.OPERATION_INCOME
             ? actualAccountBalance + +this.amount
             : actualAccountBalance - this.amount;
       } else {
@@ -222,7 +216,7 @@ transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () 
     });
     let promises = [];
     if (transactions.length > 0) {
-      if (this.type === OPERATION_INCOME) {
+      if (this.type === constants.OPERATION_INCOME) {
         promises = transactions.map(async (operation) => {
           operation.accountBalance = +operation.accountBalance + +this.amount;
           return operation.save();
@@ -271,7 +265,7 @@ transactionSchema.statics.getRangeInAsc = async function (
       })
         .sort({ date: 1, createdAt: 1 })
         .limit(1);
-      if (transaction[0].type == OPERATION_INCOME) {
+      if (transaction[0].type == constants.OPERATION_INCOME) {
         transaction[0].accountBalance =
           +transaction[0].amount + +account.initialBalance;
       } else {
@@ -306,7 +300,7 @@ transactionSchema.statics.updateBalanceInRange = async function (range) {
     let lastBalance = range[0].accountBalance;
     range = range.slice(1);
     const promises = range.map(async (operation) => {
-      if (operation.type == OPERATION_INCOME) {
+      if (operation.type == constants.OPERATION_INCOME) {
         operation.accountBalance = +operation.amount + +lastBalance;
         lastBalance = operation.accountBalance;
         return operation.save();
@@ -351,11 +345,13 @@ transactionSchema.methods.updateTransactionsBalance = async function (diff) {
     });
 
     let promises = [];
-    if (this.type === OPERATION_INCOME) {
+
+    if (this.type === constants.OPERATION_INCOME) {
       promises = transactions.map(async (transaction) => {
         transaction.accountBalance = +transaction.accountBalance + diff;
         if (!transaction.isPlanned) {
           account.balance = transaction.accountBalance;
+          console.log("acc.balance2: ", +account.balance);
         }
         return transaction.save();
       });

@@ -46,6 +46,7 @@ exports.getCashFlowReport = async (req, res, next) => {
 exports.getProfitAndLossReport = async (req, res, next) => {
   const { businessId, queryData, reportBy, method } = req.body;
   let result = null;
+
   try {
     switch (reportBy) {
       case CATEGORY:

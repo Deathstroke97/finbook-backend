@@ -2,8 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const Account = require("./account");
 const ObjectId = mongoose.Types.ObjectId;
-const Contractor = require("./contractor");
-const Project = require("./project");
+
 const {
   putCategoriesByActivity,
   getSkeletonForCategoryReport,
@@ -250,6 +249,7 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
   businessId,
   queryData,
   countPlanned,
+  method,
 }) {
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
   const Transaction = require("./transaction");
@@ -299,14 +299,105 @@ categorySchema.statics.generateProfitAndLossByCategory = async function ({
     select: "name",
   });
 
-  const divided = constructReportForSeparateCategories(aggResult, queryData);
+  const divided = constructReportForSeparateCategories(
+    aggResult,
+    queryData,
+    method
+  );
+  // return divided.separateCategoriesReport;
 
   //separate categories's report ready, main report is next
   const report = getSkeletonForProfitAndLossByCategory(queryData);
-  constructProfitAndLossByCategory(divided.aggResult, report, queryData);
+  constructProfitAndLossByCategory(
+    divided.aggResult,
+    report,
+    queryData,
+    method
+  );
   filterEmptyCategoriesProfitAndLoss(report);
   calculateOperatingProfit(report);
   report.separateCategoriesReport = divided.separateCategoriesReport;
+  return report;
+};
+
+categorySchema.statics.constructReportForSeparateCategories = async (
+  queryData,
+  countPlanned,
+  method
+) => {
+  const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
+  const Category = mongoose.model("Category", categorySchema);
+  const separateCategoriesIds = [
+    "5ebecdab81f7e40ed8f8730a",
+    "5eef32cbb903de06654362bc",
+  ];
+  const seperateCategories = await Category.aggregate([
+    {
+      $match: {
+        $or: [
+          { _id: ObjectId(separateCategoriesIds[0]) },
+          { _id: ObjectId(separateCategoriesIds[1]) },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "_id",
+        foreignField: "category",
+        as: "transactions",
+      },
+    },
+    {
+      $unwind: "$transactions",
+    },
+    {
+      $match: {
+        "transactions.date": {
+          $gte: new Date(queryData.createTime.$gte),
+          $lte: new Date(queryData.createTime.$lte),
+        },
+        ...filterPlanned,
+      },
+    },
+    {
+      $group: {
+        _id: { category: "$_id" },
+        name: { $first: "$name" },
+        operations: { $push: "$transactions" },
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
+  ]);
+
+  const report = getSkeletonForCategoryReport(queryData);
+
+  constructReportByCategory(seperateCategories, report, queryData, method);
+
+  delete report.moneyInTheBeginning;
+  delete report.moneyInTheEnd;
+  delete report.balance;
+  delete report.incomes;
+  report.outcomes.categories.forEach((cat) => delete cat.operations);
+
   return report;
 };
 
