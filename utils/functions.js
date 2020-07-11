@@ -1,5 +1,13 @@
 const moment = require("moment");
 const mongoose = require("mongoose");
+const Project = require("../models/project");
+const Transaction = require("../models/transaction");
+const ObjectId = mongoose.Types.ObjectId;
+const Business = require("../models/business");
+const axios = require("axios");
+
+const { aggregate } = require("../models/contractor");
+const e = require("express");
 
 exports.populateTransactions = (aggResult) => {
   const Account = require("../models/account");
@@ -119,4 +127,17 @@ exports.filterEmptyCategoriesProfitAndLoss = (report) => {
   report.outcomes.withoutProjects.categories = report.outcomes.withoutProjects.categories.filter(
     (category) => category.periods.total !== 0
   );
+};
+
+exports.transform = (array, dataType) => {
+  if (dataType === "transaction") {
+    array = array.map((el) => {
+      return {
+        ...el._doc,
+        amount: parseFloat(el.amount).toFixed(2),
+        accountBalance: parseFloat(el.accountBalance).toFixed(2),
+      };
+    });
+  }
+  return array;
 };

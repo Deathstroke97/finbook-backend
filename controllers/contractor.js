@@ -1,7 +1,9 @@
 const Contractor = require("../models/contractor");
+const Transaction = require("../models/transaction");
+const Obligation = require("../models/obligation");
 
 exports.getContractors = async (req, res, next) => {
-  const businessId = req.body.businessId;
+  const businessId = req.businessId;
   try {
     const contractors = await Contractor.find({ business: businessId });
     res.status(200).json({
@@ -99,6 +101,35 @@ exports.deleteContractor = async (req, res, next) => {
     await Contractor.findByIdAndRemove(contractorId);
     res.status(200).json({
       message: "contractor deleted. ",
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+exports.getContractor = async (req, res, next) => {
+  const contractorId = req.params.contractorId;
+  const { businessId } = req.query;
+  try {
+    const contractor = await Contractor.findById(contractorId);
+    const obligations = await Obligation.find({
+      business: businessId,
+      contractor: contractor,
+    });
+    if (!contractor) {
+      const error = new Error("Could not find requested contractor.");
+      error.statusCode = 404;
+      throw error;
+    }
+    const numbers = await Contractor.getNumbers2(businessId, contractorId);
+    res.status(200).json({
+      message: "Contractor fetched. ",
+      contractor,
+      numbers,
+      obligations,
     });
   } catch (error) {
     if (!error.statusCode) {

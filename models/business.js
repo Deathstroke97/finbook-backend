@@ -13,6 +13,12 @@ const businessSchema = new Schema(
       ref: "User",
       required: true,
     },
+    currency: {
+      type: String,
+      enum: ["RUB", "EUR", "USD", "KZT", "UAH", "GBP", "BYN"],
+      required: true,
+      default: "KZT",
+    },
   },
   { timestamps: true }
 );

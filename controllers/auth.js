@@ -6,8 +6,9 @@ const jwt = require("jsonwebtoken");
 
 exports.signup = async (req, res, next) => {
   const email = req.body.email;
-  const businessName = req.body.businessName;
   const password = req.body.password;
+  const name = req.body.name;
+  const businessName = req.body.businessName;
 
   try {
     const hashedPw = await bcrypt.hash(password, 12);
@@ -16,6 +17,8 @@ exports.signup = async (req, res, next) => {
       // _id: "5eb41e8ecc207a08995b43c1",
       email: email,
       password: hashedPw,
+      name: name,
+      businessName: businessName,
     });
     const newUser = await user.save();
 
@@ -27,7 +30,7 @@ exports.signup = async (req, res, next) => {
       totalBalance: 0,
     });
     await business.save();
-    newUser.businesses.push(business);
+    newUser.business = business._id;
     await newUser.save();
     res.status(201).json({
       message: "User created!",
@@ -59,14 +62,26 @@ exports.login = async (req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
+    console.log("loadedUser: ", loadedUser.business);
+
     const token = jwt.sign(
-      { email: email, userId: loadedUser._id.toString() },
+      {
+        email: email,
+        userId: loadedUser._id.toString(),
+        businessId: loadedUser.business.toString(),
+      },
       "somesupersecret"
       // { expiresIn: "1h" }
     );
+    const business = await Business.findById(loadedUser.business);
+    console.log("business: ", business);
     res.status(200).json({
       token: token,
       userId: loadedUser._id.toString(),
+      name: user.name,
+      businessId: user.business,
+      businessName: user.businessName,
+      businessCurrency: business.currency,
     });
   } catch (err) {
     if (!err.statusCode) {

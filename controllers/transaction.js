@@ -5,10 +5,11 @@ const Obligation = require("../models/obligation");
 const Contractor = require("../models/contractor");
 
 const constants = require("../constants");
+const { transform } = require("../utils/functions");
 
 exports.getTransactions = async (req, res, next) => {
+  const businessId = req.businessId;
   const {
-    businessId,
     queryData,
     type,
     category,
@@ -16,13 +17,15 @@ exports.getTransactions = async (req, res, next) => {
     contractor,
     project,
     status,
-    currentPage,
-    perPage,
+    page,
+    rowsPerPage,
   } = req.body;
   try {
     let query = {};
     if (businessId) query.business = businessId;
-    if (queryData) query.date = queryData.createTime;
+    if (queryData.createTime.$gte && queryData.createTime.$lte) {
+      query.date = queryData.createTime;
+    }
     if (type) query.type = type;
     if (category) query.category = category;
     if (account) query.account = account;
@@ -31,13 +34,33 @@ exports.getTransactions = async (req, res, next) => {
     if (status == constants.COMPLETED) query.isPlanned = false;
     if (status == constants.PLANNED) query.isPlanned = true;
 
+    const overallNumbers = await Account.getOverallNumbers(
+      businessId,
+      null,
+      queryData.createTime.$gte,
+      queryData.createTime.$lte
+    );
+
+    const moneyInBusiness = await Account.getMoneyInBusiness(businessId);
+    console.log("query: ", query);
+
+    const totalItems = await Transaction.find(query).countDocuments();
+
     const transactions = await Transaction.find(query)
       .populate("account")
       .populate("project")
-      .sort({ date: -1 });
+      .populate("category")
+      .populate("contractor")
+      .sort({ date: -1, createdAt: -1 })
+      .skip(page * rowsPerPage)
+      .limit(rowsPerPage);
+
     res.status(200).json({
       message: "Transactions fetched successfully.",
-      transactions: transactions,
+      transactions: transform(transactions, "transaction"),
+      overallNumbers: overallNumbers,
+      moneyInBusiness: moneyInBusiness,
+      totalItems: totalItems,
     });
   } catch (error) {
     if (!error.statusCode) {
@@ -57,6 +80,7 @@ exports.createTransaction = async (req, res, next) => {
 
     const startTransaction = await Transaction.find({
       business: businessId,
+      account: account,
       date: { $lte: date },
     })
       .sort({ date: -1, createdAt: -1 })

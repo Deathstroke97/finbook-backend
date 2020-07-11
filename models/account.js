@@ -1,7 +1,11 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
+
 const moment = require("moment");
+const axios = require("axios");
+const Business = require("./business");
+
 const { populateWithBuckets, calculateBalance } = require("../utils/functions");
 const {
   getSkeletonForAccountReport,
@@ -20,7 +24,7 @@ const accountSchema = new Schema({
   },
   currency: {
     type: String,
-    enum: ["RUR", "EUR", "USD", "KZT", "UAH", "GBP", "BYN"],
+    enum: ["RUB", "EUR", "USD", "KZT", "UAH", "GBP", "BYN"],
     required: true,
   },
   number: {
@@ -224,6 +228,196 @@ accountSchema.statics.generateCashFlowByAccounts = async function ({
   calculateBalance(report);
 
   return report;
+};
+
+accountSchema.statics.getOverallNumbers = async (
+  businessId,
+  project,
+  startTime,
+  endTime
+) => {
+  console.log("startTime: ", startTime);
+  console.log("endTime: ", endTime);
+  let transactionDates = {};
+  if (startTime && endTime) {
+    transactionDates = {
+      "transactions.date": {
+        $gte: new Date(startTime),
+        $lte: new Date(endTime),
+      },
+    };
+  }
+  const projectInfo = project
+    ? { "transactions.project": ObjectId(project._id) }
+    : {};
+
+  const aggResult = await Account.aggregate([
+    {
+      $match: {
+        business: ObjectId(businessId),
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "_id",
+        foreignField: "account",
+        as: "transactions",
+      },
+    },
+    {
+      $unwind: "$transactions",
+    },
+    {
+      $match: {
+        // "transactions.date": {
+        //   $gte: new Date(startTime),
+        //   $lte: new Date(endTime),
+        // },
+        ...transactionDates,
+        "transactions.isPlanned": false,
+        ...projectInfo,
+      },
+    },
+    {
+      $project: {
+        "transactions.isPlanned": 0,
+        "transactions.isPeriodic": 0,
+        "transactions.rootOfPeriodicChain": 0,
+        "transactions.isObligation": 0,
+
+        "transactions.business:": 0,
+        "transactions.contractor": 0,
+        "transactions.project": 0,
+        "transactions.account:": 0,
+        "transactions.createdAt": 0,
+        "transactions.updatedAt:": 0,
+        "transactions.accountBalance": 0,
+      },
+    },
+    {
+      $group: {
+        _id: { account: "$name" },
+        currency: { $first: "$currency" },
+        operations: { $push: "$transactions" },
+      },
+    },
+    {
+      $project: {
+        currency: 1,
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
+  ]);
+
+  const result = {
+    totalIncome: {
+      fact: 0,
+      plan: 0,
+    },
+    totalOutcome: {
+      fact: 0,
+      plan: 0,
+    },
+    totalBalance: {
+      fact: 0,
+      plan: 0,
+    },
+  };
+  const business = await Business.findById(businessId);
+
+  for (const account of aggResult) {
+    let income = 0;
+    let outcome = 0;
+    account.incomeOperations.forEach((operation) => {
+      income += +operation.amount;
+    });
+    account.outcomeOperations.forEach((operation) => {
+      outcome += +operation.amount;
+    });
+
+    let exchangeRate = 1;
+    if (account.currency != business.currency) {
+      console.log("account.currency: ", account.currency);
+      console.log("business.currency: ", business.currency);
+
+      // const response = await axios.get(
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      // );
+      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
+      // *second option
+      // const response = await axios.get(
+      //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
+      // );
+
+      // exchangeRate = response.data.amount;
+      // *third option
+
+      const response = await axios.get(
+        `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+      );
+      exchangeRate = response.data.conversion_rates[business.currency];
+      console.log("response-response: ", exchangeRate);
+    }
+    console.log("exchangeRate: ", exchangeRate);
+    result.totalIncome.fact += exchangeRate * income;
+    result.totalOutcome.fact += exchangeRate * outcome;
+  }
+
+  result.totalBalance.fact = result.totalIncome.fact - result.totalOutcome.fact;
+
+  if (project) {
+    result.totalIncome.plan = +project.planIncome;
+    result.totalOutcome.plan = +project.planOutcome;
+  }
+  return result;
+};
+
+accountSchema.statics.getMoneyInBusiness = async (businessId) => {
+  const moneyInBusiness = {
+    total: 0,
+    accounts: [],
+  };
+  const business = await Business.findById(businessId);
+  const accounts = await Account.find({ business: ObjectId(businessId) });
+
+  for (const account of accounts) {
+    let exchangeRate = 1;
+    if (account.currency != business.currency) {
+      // const response = await axios.get(
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      // );
+      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
+      // const response = await axios.get(
+      //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
+      // );
+      // exchangeRate = response.data.amount;
+      const response = await axios.get(
+        `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+      );
+      exchangeRate = response.data.conversion_rates[business.currency];
+    }
+    moneyInBusiness.total += exchangeRate * account.balance;
+    moneyInBusiness.accounts.push({
+      name: account.name,
+      balance: +account.balance,
+      currency: account.currency,
+    });
+  }
+  return moneyInBusiness;
 };
 
 const Account = mongoose.model("Account", accountSchema);

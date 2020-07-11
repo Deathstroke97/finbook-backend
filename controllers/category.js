@@ -2,7 +2,7 @@ const Category = require("../models/category");
 const Business = require("../models/business");
 
 exports.getCategories = async (req, res, next) => {
-  const businessId = req.body.businessId;
+  const businessId = req.businessId;
   try {
     const categories = await Category.find({
       business: businessId,

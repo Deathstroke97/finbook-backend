@@ -4,17 +4,21 @@ const router = express.Router();
 
 const transactionController = require("../controllers/transaction");
 
-router.post("/transactions", transactionController.getTransactions);
+const isAuth = require("../middleware/is_auth");
 
-router.post("/transaction", transactionController.createTransaction);
+router.post("/transactions", isAuth, transactionController.getTransactions);
+
+router.post("/transaction", isAuth, transactionController.createTransaction);
 
 router.put(
   "/transaction/:transactionId",
+  isAuth,
   transactionController.updateTransaction
 );
 
 router.delete(
   "/transaction/:transactionId",
+  isAuth,
   transactionController.deleteTransaction
 );
 

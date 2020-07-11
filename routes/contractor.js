@@ -4,15 +4,28 @@ const router = express.Router();
 
 const contractorController = require("../controllers/contractor");
 
-router.post("/contractors", contractorController.getContractors);
+const isAuth = require("../middleware/is_auth");
 
-router.post("/contractor", contractorController.createContractor);
+router.get("/contractors", isAuth, contractorController.getContractors);
 
-router.put("/contractor/:contractorId", contractorController.updateContractor);
+router.post("/contractor", isAuth, contractorController.createContractor);
+
+router.put(
+  "/contractor/:contractorId",
+  isAuth,
+  contractorController.updateContractor
+);
 
 router.delete(
   "/contractor/:contractorId",
+  isAuth,
   contractorController.deleteContractor
+);
+
+router.get(
+  "/contractor/:contractorId",
+  isAuth,
+  contractorController.getContractor
 );
 
 module.exports = router;

@@ -4,12 +4,14 @@ const router = express.Router();
 
 const accountController = require("../controllers/account");
 
-router.post("/accounts", accountController.getAccounts);
+const isAuth = require("../middleware/is_auth");
 
-router.post("/account", accountController.createAccount);
+router.get("/accounts", isAuth, accountController.getAccounts);
 
-router.put("/account/:accountId", accountController.updateAccount);
+router.post("/account", isAuth, accountController.createAccount);
 
-router.delete("/account/:accountId", accountController.deleteAccount);
+router.put("/account/:accountId", isAuth, accountController.updateAccount);
+
+router.delete("/account/:accountId", isAuth, accountController.deleteAccount);
 
 module.exports = router;

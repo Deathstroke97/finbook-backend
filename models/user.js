@@ -11,12 +11,16 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    businesses: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "business",
-      },
-    ],
+    business: {
+      type: Schema.Types.ObjectId,
+      ref: "business",
+    },
+    businessName: {
+      type: String,
+    },
+    name: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

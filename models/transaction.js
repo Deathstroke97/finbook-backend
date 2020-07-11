@@ -212,6 +212,7 @@ transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () 
     const Transaction = mongoose.model("Transaction", transactionSchema);
     const transactions = await Transaction.find({
       business: this.business,
+      account: this.account,
       date: { $gt: this.date },
     });
     let promises = [];

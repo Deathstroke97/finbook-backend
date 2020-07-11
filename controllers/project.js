@@ -1,7 +1,9 @@
 const Project = require("../models/project");
+const Account = require("../models/account");
+const { getOverallNumbers } = require("../utils/functions");
 
 exports.getProjects = async (req, res, next) => {
-  const businessId = req.body.businessId;
+  const businessId = req.businessId;
   try {
     const projects = await Project.find({ business: businessId });
     res.status(200).json({
@@ -81,6 +83,34 @@ exports.deleteProject = async (req, res, next) => {
     await Project.findByIdAndRemove(projectId);
     res.status(200).json({
       message: "Project deleted. ",
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+exports.getProject = async (req, res, next) => {
+  const projectId = req.params.projectId;
+  const { startTime, endTime, businessId } = req.query;
+  try {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      const error = new Error("Could not find requested project.");
+      error.statusCode = 404;
+      throw error;
+    }
+    const numbers = await Account.getOverallNumbers(
+      businessId,
+      project,
+      startTime,
+      endTime
+    );
+    res.status(200).json({
+      project: project,
+      numbers: numbers,
     });
   } catch (error) {
     if (!error.statusCode) {
