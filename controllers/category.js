@@ -5,7 +5,7 @@ exports.getCategories = async (req, res, next) => {
   const businessId = req.businessId;
   try {
     const categories = await Category.find({
-      business: businessId,
+      $or: [{ business: businessId }, { business: null }],
     });
     res.status(200).json({
       message: "Categories fetched successfully",

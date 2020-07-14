@@ -10,16 +10,18 @@ router.post("/transactions", isAuth, transactionController.getTransactions);
 
 router.post("/transaction", isAuth, transactionController.createTransaction);
 
-router.put(
-  "/transaction/:transactionId",
-  isAuth,
-  transactionController.updateTransaction
-);
+router.put("/transaction", isAuth, transactionController.updateTransaction);
 
 router.delete(
   "/transaction/:transactionId",
   isAuth,
   transactionController.deleteTransaction
+);
+
+router.post(
+  "/transaction/cancelRepetition",
+  isAuth,
+  transactionController.cancelRepetition
 );
 
 module.exports = router;

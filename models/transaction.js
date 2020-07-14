@@ -13,7 +13,6 @@ const transactionSchema = new Schema(
     business: {
       type: Schema.Types.ObjectId,
       ref: "Business",
-      required: true,
     },
     account: {
       type: Schema.Types.ObjectId,
@@ -65,7 +64,7 @@ const transactionSchema = new Schema(
     },
     period: {
       type: String,
-      enum: ["week", "month", "twoMonth", "quarter", "halfYear", "year"],
+      // enum: ["week", "month", "twoMonth", "quarter", "halfYear", "year"],
     },
     periodicChainId: Schema.Types.ObjectId,
     repetitionEndDate: Date,
@@ -90,10 +89,10 @@ transactionSchema.methods.attachObligation = async function () {
 
   if (contractor) {
     if (this.type === constants.OPERATION_INCOME) {
-      contractor.balance = +contractor.balance + +this.amount;
+      contractor.balance = +contractor.balance - this.amount;
     }
     if (this.type === constants.OPERATION_OUTCOME) {
-      contractor.balance = +contractor.balance - this.amount;
+      contractor.balance = +contractor.balance + +this.amount;
     }
     await contractor.save();
   }
@@ -112,7 +111,9 @@ transactionSchema.methods.attachObligation = async function () {
   return this.save();
 };
 
-transactionSchema.methods.addPeriodicChain = async function (account) {
+transactionSchema.methods.addPeriodicChain = async function (accountId) {
+  const Account = mongoose.model("Account");
+  const account = await Account.findById(accountId);
   let beginDate = moment(this.date).valueOf();
   let endDate = moment(this.repetitionEndDate).valueOf();
   let period = "";
@@ -136,6 +137,8 @@ transactionSchema.methods.addPeriodicChain = async function (account) {
     case constants.PERIOD_YEAR:
       period = moment.duration(1, "year").valueOf();
       break;
+    default:
+      return;
   }
   beginDate += period;
   try {
@@ -321,15 +324,16 @@ transactionSchema.statics.updateBalanceInRange = async function (range) {
   }
 };
 
-transactionSchema.methods.updateTransactionsBalance = async function (diff) {
-  const Account = require("./account");
+transactionSchema.methods.updateTransactionsBalance = async function (
+  diff,
+  account
+) {
   try {
     const Transaction = mongoose.model("Transaction", transactionSchema);
 
-    const account = await Account.findById(this.account);
     const filter = {
       business: this.business,
-      account: this.account,
+      account: account,
     };
     const transactions = await Transaction.find({
       $or: [
@@ -372,6 +376,172 @@ transactionSchema.methods.updateTransactionsBalance = async function (diff) {
       error.statusCode = 500;
     }
     throw error;
+  }
+};
+
+transactionSchema.methods.updateContractor = async (contractor) => {
+  if (this.isObligation && !this.isPlanned) {
+    const obligation = await Obligation.findById(this.obligationId);
+    obligation.contractor = contractor;
+    await obligation.save();
+
+    const oldContractor = await Contractor.findById(this.contractor);
+
+    if (this.type === constants.OPERATION_INCOME) {
+      oldContractor.balance = +oldContractor.balance + +this.amount;
+    }
+    if (this.type === constants.OPERATION_OUTCOME) {
+      oldContractor.balance = +oldContractor.balance - this.amount;
+    }
+    await oldContractor.save();
+    const newContractor = await Contractor.findById(contractor);
+    if (this.type === constants.OPERATION_INCOME) {
+      newContractor.balance = +newContractor.balance - this.amount;
+    }
+    if (this.type === constants.OPERATION_OUTCOME) {
+      newContractor.balance = +newContractor.balance + +this.amount;
+    }
+    await newContractor.save();
+    this.contractor = contractor;
+  }
+};
+
+transactionSchema.methods.updateAccount = async (account) => {
+  const Account = mongoose.model("Account");
+
+  const fromAccount = await Account.findById(this.account);
+  const toAccount = await Account.findById(account);
+
+  this.updateTransactionsBalance(this.amount, fromAccount._id);
+  this.updateTransactionsBalance(this.amount, toAccount._id);
+  this.account = account;
+};
+
+transactionSchema.methods.updateAmount = async (amount) => {
+  if (this.isObligation && !this.isPlanned) {
+    const obligation = await Obligation.findById(this.obligationId);
+    obligation.amount = amount;
+    await obligation.save();
+    const contractor = await Contractor.findById(this.contractor);
+    if (this.type === constants.OPERATION_INCOME) {
+      contractor.balance = +contractor.balance + +this.amount - amount;
+    }
+    if (this.type === constants.OPERATION_OUTCOME) {
+      contractor.balance = +contractor.balance - this.amount + +amount;
+    }
+    await contractor.save();
+  }
+  const diff = +amount - this.amount;
+  this.date = date;
+  this.amount = amount;
+  await this.save();
+  await this.updateTransactionsBalance(diff, this.account);
+};
+
+transactionSchema.methods.updateDate = async (date) => {
+  const Transaction = mongoose.model("Transaction", transactionSchema);
+  let lowerBound, upperBound, range;
+  if (moment(this.date) < moment(date)) {
+    lowerBound = this.date;
+    upperBound = date;
+  } else {
+    lowerBound = date;
+    upperBound = this.date;
+  }
+  this.date = date;
+  await this.save();
+  range = await Transaction.getRangeInAsc(
+    businessId,
+    account,
+    this._id,
+    lowerBound,
+    upperBound
+  );
+  await Transaction.updateBalanceInRange(range);
+};
+
+// transactionSchema.methods.updateObligation = async (
+//   isObligation,
+//   contractorId
+// ) => {
+//   if (!isObligation && this.isObligation) {
+//     if (moment(this.date) > moment()) {
+//       this.isObligation = false;
+//     } else {
+//       if (!this.isPlanned) {
+//         const contractor = await Contractor.findById(contractorId);
+//         if (this.type === constants.OPERATION_INCOME) {
+//           contractor.balance = +contractor.balance + +this.amount;
+//         }
+//         if (this.type === constants.OPERATION_OUTCOME) {
+//           contractor.balance = +contractor.balance - this.amount;
+//         }
+//         await contractor.save();
+//         await Obligation.findByIdAndRemove(this.obligationId);
+//       }
+//     }
+//   }
+//   if (isObligation && !this.isObligation) {
+//     if (moment(this.date) > moment()) {
+//       this.isObligation = true;
+//     } else {
+//       await this.attachObligation();
+//     }
+//   }
+// };
+
+transactionSchema.methods.updateObligation = async (
+  isObligation,
+  contractorId
+) => {
+  if (!isObligation && this.isObligation) {
+    this.isObligation = false;
+    if (moment(this.date) < moment()) {
+      if (!this.isPlanned) {
+        const contractor = await Contractor.findById(contractorId);
+        if (this.type === constants.OPERATION_INCOME) {
+          contractor.balance = +contractor.balance + +this.amount;
+        }
+        if (this.type === constants.OPERATION_OUTCOME) {
+          contractor.balance = +contractor.balance - this.amount;
+        }
+        await contractor.save();
+        await Obligation.findByIdAndRemove(this.obligationId);
+      }
+    }
+  }
+  if (isObligation && !this.isObligation) {
+    this.isObligation = true;
+    if (moment(this.date) < moment()) {
+      await this.attachObligation();
+    }
+  }
+};
+
+transactionSchema.methods.updatePeriod = async (period) => {
+  const Transaction = mongoose.model("Transaction");
+  await Transaction.deleteMany({
+    periodicChainId: this._id,
+    isPlanned: true,
+  });
+  this.period = period;
+  await this.save();
+  await this.addPeriodicChain(this.account);
+};
+
+transactionSchema.methods.updateIsPeriodic = async (isPeriodic) => {
+  const Transaction = mongoose.model("Transaction");
+  if (isPeriodic && !this.isPeriodic) {
+    this.rootOfPeriodicChain = true;
+    this.periodicChainId = this._id;
+    await this.save();
+    await this.addPeriodicChain(account);
+  }
+  if (!isPeriodic && this.isPeriodic) {
+    await Transaction.deleteMany({
+      periodicChainId: this._id,
+      isPlanned: true,
+    });
   }
 };
 

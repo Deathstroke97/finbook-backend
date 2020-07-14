@@ -6,6 +6,7 @@ const Contractor = require("../models/contractor");
 
 const constants = require("../constants");
 const { transform } = require("../utils/functions");
+const { OPERATION_INCOME } = require("../constants");
 
 exports.getTransactions = async (req, res, next) => {
   const businessId = req.businessId;
@@ -72,7 +73,8 @@ exports.getTransactions = async (req, res, next) => {
 
 exports.createTransaction = async (req, res, next) => {
   const { body } = req;
-  const { businessId, date, type, amount, account } = req.body;
+  const businessId = req.businessId;
+  const { date, type, amount, account } = req.body;
 
   try {
     const acc = await Account.findById(account);
@@ -97,7 +99,7 @@ exports.createTransaction = async (req, res, next) => {
     const isPlanned = moment(date) > moment() ? true : false;
 
     const transaction = new Transaction({
-      business: body.businessId,
+      business: businessId,
       date: body.date,
       isPlanned: isPlanned,
       type: body.type,
@@ -130,11 +132,11 @@ exports.createTransaction = async (req, res, next) => {
       }
     }
 
-    if (body.isPeriodic) {
+    if (body.isPeriodic && body.period) {
       transaction.rootOfPeriodicChain = true;
       transaction.periodicChainId = transaction._id;
       await transaction.save();
-      await transaction.addPeriodicChain(acc);
+      await transaction.addPeriodicChain(acc._id);
     }
     res.status(201).json({
       message: "Transaction created!",
@@ -148,95 +150,71 @@ exports.createTransaction = async (req, res, next) => {
 };
 
 exports.updateTransaction = async (req, res, next) => {
-  const transactionId = req.params.transactionId;
-  const { body } = req;
   const {
-    businessId,
+    id,
     date,
+    relatedDate,
     amount,
     account,
+    project,
+    description,
+    contractor,
+    category,
     isObligation,
     isPeriodic,
+    period,
+    repetitionEndDate,
   } = req.body;
 
   try {
-    const transaction = await Transaction.findById(transactionId);
+    const transaction = await Transaction.findById(id);
 
-    // transaction.category = body.category;
-    // transaction.project = body.project;
-    // transaction.contractor = body.contractor;
-    // transaction.account = body.account;
-    // transaction.description = body.description;
-    // transaction.relatedDate = body.relatedDate;
-    // transaction.repetitionEndDate = body.repetitionEndDate;
-    // transaction.isObligation = body.isObligation;
+    if (transaction.account.toString() !== account) {
+      await transaction.updateAccount(account);
+    }
+
+    if (transaction.contractor && contractor) {
+      if (contractor !== transaction.contractor.toString()) {
+        await transaction.updateContractor(contractor);
+      }
+    }
 
     if (transaction.amount.toString() !== amount) {
-      const diff = +amount - transaction.amount;
-      transaction.date = date;
-      transaction.amount = amount;
-      await transaction.save();
-      await transaction.updateTransactionsBalance(diff);
+      await transaction.updateAmount(amount);
     }
 
     const transactionDate = moment(transaction.date).format("YYYY-MM-DD");
     if (transactionDate !== date) {
-      let lowerBound, upperBound, range;
-      if (moment(transaction.date) < moment(date)) {
-        lowerBound = transaction.date;
-        upperBound = date;
-      } else {
-        lowerBound = date;
-        upperBound = transaction.date;
-      }
-      transaction.date = date;
-      await transaction.save();
-      range = await Transaction.getRangeInAsc(
-        businessId,
-        account,
-        transaction._id,
-        lowerBound,
-        upperBound
-      );
-      await Transaction.updateBalanceInRange(range);
+      await transaction.updateDate(date);
     }
 
     if (!isObligation && transaction.isObligation) {
-      if (moment(transaction.date) > moment()) {
-        transaction.isObligation = false;
-      } else {
-        if (!transaction.isPlanned) {
-          const contractor = await Contractor.findById(body.contractor);
-          if (transaction.type === constants.OPERATION_INCOME) {
-            contractor.balance = +contractor.balance - transaction.amount;
-          }
-          if (transaction.type === constants.OPERATION_OUTCOME) {
-            contractor.balance = +contractor.balance + +transaction.amount;
-          }
-          await contractor.save();
-          await Obligation.findByIdAndRemove(transaction.obligationId);
-        }
-      }
+      await transaction.updateIsObligation(!isObligation, contractor);
     }
+
     if (isObligation && !transaction.isObligation) {
-      if (moment(transaction.date) > moment()) {
-        transaction.isObligation = true;
-      } else {
-        await transaction.attachObligation();
-      }
+      await transaction.updateIsObligation(isObligation, contractor);
     }
+
+    if (period !== transaction.period) {
+      await transaction.updatePeriod();
+    }
+
     if (isPeriodic && !transaction.isPeriodic) {
-      transaction.rootOfPeriodicChain = true;
-      transaction.periodicChainId = transaction._id;
-      await transaction.save();
-      await transaction.addPeriodicChain(account);
+      await transaction.updateIsPeriodic(isPeriodic);
     }
+
     if (!isPeriodic && transaction.isPeriodic) {
-      await Transaction.deleteMany({
-        periodicChainId: transaction._id,
-        isPlanned: true,
-      });
+      await transaction.updateIsPeriodic(!isPeriodic);
     }
+
+    transaction.description = description;
+    transaction.relatedDate = relatedDate;
+    transaction.repetitionEndDate = repetitionEndDate;
+    transaction.category = category;
+    transaction.project = project;
+
+    await transaction.save();
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -250,7 +228,6 @@ exports.updateTransaction = async (req, res, next) => {
 
 exports.deleteTransaction = async (req, res, next) => {
   const transactionId = req.params.transactionId;
-  const body = req.body;
   try {
     const transaction = await Transaction.findById(transactionId);
 
@@ -280,7 +257,7 @@ exports.deleteTransaction = async (req, res, next) => {
         await account.save();
       }
       const diff = 0 - transaction.amount;
-      await transaction.updateTransactionsBalance(diff);
+      await transaction.updateTransactionsBalance(diff, transaction.account);
       await Transaction.findByIdAndRemove(transactionId);
     }
   } catch (error) {
@@ -291,5 +268,23 @@ exports.deleteTransaction = async (req, res, next) => {
   }
   res.status(200).json({
     message: "Transaction deleted.",
+  });
+};
+
+exports.cancelRepetition = async (req, res, next) => {
+  const periodicChainId = req.body.periodicChainId;
+  try {
+    await Transaction.deleteMany({
+      periodicChainId: periodicChainId,
+      isPlanned: true,
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+  res.status(200).json({
+    message: "Transaction repetition cancelled.",
   });
 };
