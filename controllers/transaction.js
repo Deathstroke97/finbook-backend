@@ -169,22 +169,27 @@ exports.updateTransaction = async (req, res, next) => {
   try {
     const transaction = await Transaction.findById(id);
 
-    if (transaction.account.toString() !== account) {
-      await transaction.updateAccount(account);
+    if (transaction.account && account) {
+      if (transaction.account.toString() !== account) {
+        await transaction.updateAccount(account);
+      }
     }
 
     if (transaction.contractor && contractor) {
-      if (contractor !== transaction.contractor.toString()) {
+      if (transaction.contractor.toString() !== contractor) {
         await transaction.updateContractor(contractor);
       }
     }
 
-    if (transaction.amount.toString() !== amount) {
+    if (parseFloat(transaction.amount).toFixed(2) != amount) {
+      console.log("99999", parseFloat(transaction.amount).toFixed(2));
       await transaction.updateAmount(amount);
     }
 
     const transactionDate = moment(transaction.date).format("YYYY-MM-DD");
     if (transactionDate !== date) {
+      console.log("1: ", transactionDate);
+      console.log("2: ", date);
       await transaction.updateDate(date);
     }
 
@@ -213,6 +218,8 @@ exports.updateTransaction = async (req, res, next) => {
     transaction.repetitionEndDate = repetitionEndDate;
     transaction.category = category;
     transaction.project = project;
+    transaction.account = account;
+    transaction.contractor = contractor;
 
     await transaction.save();
   } catch (error) {
