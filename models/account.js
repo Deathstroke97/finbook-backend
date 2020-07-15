@@ -367,8 +367,10 @@ accountSchema.statics.getOverallNumbers = async (
       // *third option
 
       const response = await axios.get(
-        `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+        // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+        `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
       );
+
       exchangeRate = response.data.conversion_rates[business.currency];
       console.log("response-response: ", exchangeRate);
     }

@@ -90,6 +90,9 @@ exports.createTransaction = async (req, res, next) => {
     if (startTransaction.length > 0) {
       amountLast = parseFloat(startTransaction[0].accountBalance);
     }
+    if (startTransaction.length === 0) {
+      amountLast = +acc.initialBalance;
+    }
 
     const accountBalance =
       type === constants.OPERATION_INCOME
@@ -235,8 +238,10 @@ exports.updateTransaction = async (req, res, next) => {
 
 exports.deleteTransaction = async (req, res, next) => {
   const transactionId = req.params.transactionId;
+
   try {
     const transaction = await Transaction.findById(transactionId);
+    const account = await Account.findById(transaction.account);
 
     if (transaction) {
       if (transaction.isObligation && !transaction.isPlanned) {
@@ -254,7 +259,6 @@ exports.deleteTransaction = async (req, res, next) => {
       }
 
       if (!transaction.isPlanned) {
-        const account = await Account.findById(transaction.account);
         if (transaction.type === constants.OPERATION_INCOME) {
           account.balance = +account.balance - transaction.amount;
         }
@@ -264,7 +268,7 @@ exports.deleteTransaction = async (req, res, next) => {
         await account.save();
       }
       const diff = 0 - transaction.amount;
-      await transaction.updateTransactionsBalance(diff, transaction.account);
+      await transaction.updateTransactionsBalance(diff, account);
       await Transaction.findByIdAndRemove(transactionId);
     }
   } catch (error) {

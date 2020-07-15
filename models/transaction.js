@@ -7,6 +7,7 @@ const Obligation = require("./obligation");
 const Contractor = require("./contractor");
 
 const constants = require("../constants");
+const Account = require("./account");
 
 const transactionSchema = new Schema(
   {
@@ -242,88 +243,6 @@ transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () 
   }
 };
 
-transactionSchema.statics.getRangeInAsc = async function (
-  businessId,
-  accountId,
-  transactionId,
-  lowerBound,
-  upperBound
-) {
-  try {
-    const Transaction = mongoose.model("Transaction", transactionSchema);
-    const Account = require("./account");
-    let startTransaction = await Transaction.find({
-      business: businessId,
-      account: accountId,
-      date: { $lte: lowerBound },
-      _id: { $ne: transactionId },
-    })
-      .sort({ date: -1, createdAt: 1 })
-      .limit(1);
-
-    if (startTransaction.length === 0) {
-      const account = await Account.findById(accountId);
-      const transaction = await Transaction.find({
-        business: businessId,
-        account: accountId,
-      })
-        .sort({ date: 1, createdAt: 1 })
-        .limit(1);
-      if (transaction[0].type == constants.OPERATION_INCOME) {
-        transaction[0].accountBalance =
-          +transaction[0].amount + +account.initialBalance;
-      } else {
-        transaction[0].accountBalance =
-          transaction[0].amount - account.initialBalance;
-      }
-      await transaction[0].save();
-      startTransaction.push(transaction[0]);
-    }
-
-    const range = await Transaction.find({
-      business: businessId,
-      account: accountId,
-      date: {
-        $gte: startTransaction[0].date,
-        $lte: upperBound,
-      },
-    }).sort({ date: 1, createdAt: 1 });
-    return range;
-  } catch (error) {
-    console.log("error:", error);
-    if (!error.statusCode) {
-      error.statusCode = 500;
-      error.message = "Failed to get range in getRangeInAsc function.";
-    }
-    throw error;
-  }
-};
-
-transactionSchema.statics.updateBalanceInRange = async function (range) {
-  try {
-    let lastBalance = range[0].accountBalance;
-    range = range.slice(1);
-    const promises = range.map(async (operation) => {
-      if (operation.type == constants.OPERATION_INCOME) {
-        operation.accountBalance = +operation.amount + +lastBalance;
-        lastBalance = operation.accountBalance;
-        return operation.save();
-      } else {
-        operation.accountBalance = +lastBalance - operation.amount;
-        lastBalance = operation.accountBalance;
-        return operation.save();
-      }
-    });
-    return Promise.all(promises);
-  } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-      error.message = "Failed to update balance in range.";
-    }
-    throw error;
-  }
-};
-
 transactionSchema.methods.updateTransactionsBalance = async function (
   diff,
   account
@@ -333,7 +252,7 @@ transactionSchema.methods.updateTransactionsBalance = async function (
 
     const filter = {
       business: this.business,
-      account: account,
+      account: account._id,
     };
     const transactions = await Transaction.find({
       $or: [
@@ -412,12 +331,13 @@ transactionSchema.methods.updateAccount = async function (account) {
   const fromAccount = await Account.findById(this.account);
   const toAccount = await Account.findById(account);
 
-  this.updateTransactionsBalance(this.amount, fromAccount._id);
-  this.updateTransactionsBalance(this.amount, toAccount._id);
+  this.updateTransactionsBalance(this.amount, fromAccount);
+  this.updateTransactionsBalance(this.amount, toAccount);
   this.account = account;
 };
 
 transactionSchema.methods.updateAmount = async function (amount) {
+  const Account = mongoose.model("Account");
   if (this.isObligation && !this.isPlanned) {
     const obligation = await Obligation.findById(this.obligationId);
     obligation.amount = amount;
@@ -435,14 +355,118 @@ transactionSchema.methods.updateAmount = async function (amount) {
   // this.date = date;
   this.amount = amount;
   // await this.save();
-  await this.updateTransactionsBalance(diff, this.account);
+  const account = await Account.findById(this.account);
+  await this.updateTransactionsBalance(diff, account);
+};
+
+transactionSchema.methods.getRangeInAsc = async function (
+  businessId,
+  accountId,
+  transactionId,
+  lowerBound,
+  upperBound
+) {
+  try {
+    const Transaction = mongoose.model("Transaction", transactionSchema);
+    const Account = mongoose.model("Account");
+    let startTransaction = await Transaction.find({
+      business: businessId,
+      account: accountId,
+      date: { $lte: lowerBound },
+      _id: { $ne: transactionId },
+    })
+      .sort({ date: -1, createdAt: 1 })
+      .limit(1);
+
+    if (startTransaction.length === 0) {
+      const account = await Account.findById(accountId);
+
+      if (this.type === constants.OPERATION_INCOME) {
+        this.accountBalance = +this.amount + +account.initialBalance;
+      } else {
+        this.accountBalance = +this.amount - account.initialBalance;
+      }
+      await this.save();
+      startTransaction.push({ ...this._doc });
+    }
+
+    const range = await Transaction.find({
+      business: businessId,
+      account: accountId,
+      date: {
+        $gte: startTransaction[0].date,
+        $lte: upperBound,
+      },
+    }).sort({ date: 1, createdAt: 1 });
+    return range;
+  } catch (error) {
+    console.log("error:", error);
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = error.message;
+    }
+    throw error;
+  }
+};
+
+transactionSchema.statics.updateBalanceInRange = async function (range) {
+  try {
+    let lastBalance = range[0].accountBalance;
+    range = range.slice(1);
+    const promises = range.map(async (operation) => {
+      if (operation.type == constants.OPERATION_INCOME) {
+        operation.accountBalance = +operation.amount + +lastBalance;
+        lastBalance = operation.accountBalance;
+
+        return operation.save();
+      } else {
+        operation.accountBalance = +lastBalance - operation.amount;
+        lastBalance = operation.accountBalance;
+        return operation.save();
+      }
+    });
+    return Promise.all(promises);
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = "Failed to update balance in range.";
+    }
+    throw error;
+  }
 };
 
 transactionSchema.methods.updateDate = async function (date) {
   const Transaction = mongoose.model("Transaction", transactionSchema);
+  const Account = mongoose.model("Account");
   let lowerBound, upperBound, range;
-  if (moment(this.date) < moment(date)) {
+
+  if (moment(date) > moment()) {
     this.isPlanned = true;
+    const account = await Account.findById(this.account);
+    if (this.type === constants.OPERATION_INCOME) {
+      account.balance = +account.balance - this.amount;
+    }
+    if (this.type === constants.OPERATION_OUTCOME) {
+      account.balance = +account.balance + +this.amount;
+    }
+    await account.save();
+  }
+
+  if (moment(date) < moment()) {
+    if (this.isPlanned) {
+      const account = await Account.findById(this.account);
+      if (this.type === constants.OPERATION_INCOME) {
+        account.balance = +account.balance + +this.amount;
+      }
+      if (this.type === constants.OPERATION_OUTCOME) {
+        account.balance = +account.balance - this.amount;
+      }
+      await account.save();
+    }
+    this.isPlanned = false;
+  }
+
+  if (moment(this.date) < moment(date)) {
     lowerBound = this.date;
     upperBound = date;
   } else {
@@ -450,8 +474,8 @@ transactionSchema.methods.updateDate = async function (date) {
     upperBound = this.date;
   }
   this.date = date;
-  // await this.save();
-  range = await Transaction.getRangeInAsc(
+  await this.save();
+  range = await this.getRangeInAsc(
     this.business,
     this.account,
     this._id,
