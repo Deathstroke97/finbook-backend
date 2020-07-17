@@ -185,14 +185,11 @@ exports.updateTransaction = async (req, res, next) => {
     }
 
     if (parseFloat(transaction.amount).toFixed(2) != amount) {
-      console.log("99999", parseFloat(transaction.amount).toFixed(2));
       await transaction.updateAmount(amount);
     }
 
     const transactionDate = moment(transaction.date).format("YYYY-MM-DD");
     if (transactionDate !== date) {
-      console.log("1: ", transactionDate);
-      console.log("2: ", date);
       await transaction.updateDate(date);
     }
 
@@ -209,6 +206,8 @@ exports.updateTransaction = async (req, res, next) => {
     }
 
     if (isPeriodic && !transaction.isPeriodic) {
+      transaction.period = period;
+      transaction.repetitionEndDate = repetitionEndDate;
       await transaction.updateIsPeriodic(isPeriodic);
     }
 
@@ -236,40 +235,16 @@ exports.updateTransaction = async (req, res, next) => {
   });
 };
 
-exports.deleteTransaction = async (req, res, next) => {
+exports.deleteTransactions = async (req, res, next) => {
   const transactionId = req.params.transactionId;
+  const transactions = req.body.transactions;
 
   try {
-    const transaction = await Transaction.findById(transactionId);
-    const account = await Account.findById(transaction.account);
-
-    if (transaction) {
-      if (transaction.isObligation && !transaction.isPlanned) {
-        const contractor = await Contractor.findById(transaction.contractor);
-        if (contractor) {
-          if (transaction.type === constants.OPERATION_INCOME) {
-            contractor.balance = +contractor.balance - transaction.amount;
-          }
-          if (transaction.type === constants.OPERATION_OUTCOME) {
-            contractor.balance = +contractor.balance + +transaction.amount;
-          }
-          await contractor.save();
-          await Obligation.findByIdAndRemove(transaction.obligationId);
-        }
+    for (const transactionId of transactions) {
+      const transaction = await Transaction.findById(transactionId);
+      if (transaction) {
+        await transaction.delete();
       }
-
-      if (!transaction.isPlanned) {
-        if (transaction.type === constants.OPERATION_INCOME) {
-          account.balance = +account.balance - transaction.amount;
-        }
-        if (transaction.type === constants.OPERATION_OUTCOME) {
-          account.balance = +account.balance + +transaction.amount;
-        }
-        await account.save();
-      }
-      const diff = 0 - transaction.amount;
-      await transaction.updateTransactionsBalance(diff, account);
-      await Transaction.findByIdAndRemove(transactionId);
     }
   } catch (error) {
     if (!error.statusCode) {
@@ -284,11 +259,32 @@ exports.deleteTransaction = async (req, res, next) => {
 
 exports.cancelRepetition = async (req, res, next) => {
   const periodicChainId = req.body.periodicChainId;
+  const transactionId = req.body.transactionId;
+  const transaction = await Transaction.findById(transactionId);
+
+  const periodicTransactions = await Transaction.find({
+    periodicChainId: periodicChainId,
+    isPlanned: false,
+  });
+  for (periodicTransaction of periodicTransactions) {
+    periodicTransaction.isPeriodic = false;
+    periodicTransaction.period = null;
+    periodicTransaction.rootOfPeriodicChain = false;
+    periodicTransaction.periodicChainId = null;
+    await periodicTransaction.save();
+  }
+
   try {
     await Transaction.deleteMany({
       periodicChainId: periodicChainId,
       isPlanned: true,
+      _id: { $ne: transactionId },
     });
+    const account = await Account.findById(transaction.account);
+    const diff = 0 - transaction.amount;
+
+    await transaction.updateTransactionsBalance(diff, account);
+    await Transaction.findByIdAndRemove(this._id);
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -297,5 +293,32 @@ exports.cancelRepetition = async (req, res, next) => {
   }
   res.status(200).json({
     message: "Transaction repetition cancelled.",
+  });
+};
+
+exports.updatePlannedTransaction = async (req, res, next) => {
+  const transactionId = req.params.transactionId;
+  try {
+    const transaction = await Transaction.findById(transactionId);
+    const account = await Account.findById(transaction.account);
+    if (transaction.isPlanned) {
+      if (transaction.type === constants.OPERATION_INCOME) {
+        account.balance = +account.balance + +transaction.amount;
+      }
+      if (transaction.type === constants.OPERATION_OUTCOME) {
+        account.balance = +account.balance - transaction.amount;
+      }
+      await account.save();
+      transaction.isPlanned = false;
+      await transaction.save();
+    }
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+  res.status(200).json({
+    message: "Transaction updated successfully.",
   });
 };

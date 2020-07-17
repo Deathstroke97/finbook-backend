@@ -184,9 +184,8 @@ transactionSchema.methods.addPeriodicChain = async function (accountId) {
           this.type == constants.OPERATION_INCOME
             ? actualAccountBalance + +this.amount
             : actualAccountBalance - this.amount;
-      } else {
-        await transaction.save();
       }
+      await transaction.save();
       beginDate += period;
     }
     if (+account.balance !== actualAccountBalance) {
@@ -360,41 +359,49 @@ transactionSchema.methods.updateAmount = async function (amount) {
 };
 
 transactionSchema.methods.getRangeInAsc = async function (
-  businessId,
-  accountId,
-  transactionId,
   lowerBound,
   upperBound
 ) {
   try {
     const Transaction = mongoose.model("Transaction", transactionSchema);
     const Account = mongoose.model("Account");
-    let startTransaction = await Transaction.find({
-      business: businessId,
-      account: accountId,
+    const startTransaction = await Transaction.find({
+      business: this.business,
+      account: this.account,
       date: { $lte: lowerBound },
-      _id: { $ne: transactionId },
+      createdAt: { $lt: this.createdAt },
     })
-      .sort({ date: -1, createdAt: 1 })
+      .sort({ date: -1, createdAt: -1 })
       .limit(1);
 
     if (startTransaction.length === 0) {
-      const account = await Account.findById(accountId);
+      const range = await Transaction.find({
+        business: this.business,
+        account: this.account,
+        date: {
+          $lte: upperBound,
+        },
+      }).sort({ date: 1, createdAt: 1 });
 
-      if (this.type === constants.OPERATION_INCOME) {
-        this.accountBalance = +this.amount + +account.initialBalance;
+      const account = await Account.findById(this.account);
+      const firstTransaction = range[0];
+
+      if (firstTransaction.type === constants.OPERATION_INCOME) {
+        firstTransaction.accountBalance =
+          +firstTransaction.amount + +account.initialBalance;
       } else {
-        this.accountBalance = +this.amount - account.initialBalance;
+        firstTransaction.accountBalance =
+          +firstTransaction.amount - account.initialBalance;
       }
-      await this.save();
-      startTransaction.push({ ...this._doc });
+      await firstTransaction.save();
+      return range;
     }
 
     const range = await Transaction.find({
-      business: businessId,
-      account: accountId,
+      business: this.business,
+      account: this.account,
       date: {
-        $gte: startTransaction[0].date,
+        $gte: lowerBound,
         $lte: upperBound,
       },
     }).sort({ date: 1, createdAt: 1 });
@@ -410,6 +417,17 @@ transactionSchema.methods.getRangeInAsc = async function (
 };
 
 transactionSchema.statics.updateBalanceInRange = async function (range) {
+  range.forEach((transaction) => {
+    const doc = transaction._doc;
+    console.log(
+      "transaction: ",
+      doc,
+      "accountBalance: ",
+      +doc.accountBalance,
+      "amount: ",
+      +doc.amount
+    );
+  });
   try {
     let lastBalance = range[0].accountBalance;
     range = range.slice(1);
@@ -475,17 +493,12 @@ transactionSchema.methods.updateDate = async function (date) {
   }
   this.date = date;
   await this.save();
-  range = await this.getRangeInAsc(
-    this.business,
-    this.account,
-    this._id,
-    lowerBound,
-    upperBound
-  );
+
+  range = await this.getRangeInAsc(lowerBound, upperBound);
   await Transaction.updateBalanceInRange(range);
 };
 
-transactionSchema.methods.updateObligation = async function (
+transactionSchema.methods.updateIsObligation = async function (
   isObligation,
   contractorId
 ) {
@@ -530,8 +543,8 @@ transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
     this.isPeriodic = true;
     this.rootOfPeriodicChain = true;
     this.periodicChainId = this._id;
-    // await this.save();
-    await this.addPeriodicChain(account);
+    await this.save();
+    await this.addPeriodicChain(this.account);
   }
   if (!isPeriodic && this.isPeriodic) {
     this.isPeriodic = false;
@@ -542,4 +555,46 @@ transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
   }
 };
 
-module.exports = mongoose.model("Transaction", transactionSchema);
+transactionSchema.methods.delete = async function () {
+  const Account = mongoose.model("Account");
+  const account = await Account.findById(this.account);
+
+  // if (this.isPeriodic && this.isPlanned) {
+  //   await Transaction.deleteMany({
+  //     periodicChainId: this.periodicChainId,
+  //     isPlanned: true,
+  //   });
+  //   return;
+  // }
+
+  if (this.isObligation && !this.isPlanned) {
+    const contractor = await Contractor.findById(this.contractor);
+    if (contractor) {
+      if (this.type === constants.OPERATION_INCOME) {
+        contractor.balance = +contractor.balance - this.amount;
+      }
+      if (this.type === constants.OPERATION_OUTCOME) {
+        contractor.balance = +contractor.balance + +this.amount;
+      }
+      await contractor.save();
+      await Obligation.findByIdAndRemove(this.obligationId);
+    }
+  }
+
+  if (!this.isPlanned) {
+    if (this.type === constants.OPERATION_INCOME) {
+      account.balance = +account.balance - this.amount;
+    }
+    if (this.type === constants.OPERATION_OUTCOME) {
+      account.balance = +account.balance + +this.amount;
+    }
+    await account.save();
+  }
+  const diff = 0 - this.amount;
+  await this.updateTransactionsBalance(diff, account);
+  await Transaction.findByIdAndRemove(this._id);
+};
+
+const Transaction = mongoose.model("Transaction", transactionSchema);
+
+module.exports = Transaction;

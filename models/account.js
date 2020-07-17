@@ -45,11 +45,11 @@ const accountSchema = new Schema({
   },
 });
 
-accountSchema.statics.getMoneyInTheBeginning = async (
+accountSchema.statics.getMoneyInTheBeginning = async function (
   businessId,
   countPlanned,
   report
-) => {
+) {
   const Transaction = require("./transaction");
   const array = report.moneyInTheBeginning.details;
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
@@ -92,11 +92,11 @@ accountSchema.statics.getMoneyInTheBeginning = async (
   }
 };
 
-accountSchema.statics.getMoneyInTheEnd = async (
+accountSchema.statics.getMoneyInTheEnd = async function (
   businessId,
   countPlanned,
   report
-) => {
+) {
   const Transaction = require("./transaction");
   const array = report.moneyInTheEnd.details;
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
@@ -230,12 +230,12 @@ accountSchema.statics.generateCashFlowByAccounts = async function ({
   return report;
 };
 
-accountSchema.statics.getOverallNumbers = async (
+accountSchema.statics.getOverallNumbers = async function (
   businessId,
   project,
   startTime,
   endTime
-) => {
+) {
   console.log("startTime: ", startTime);
   console.log("endTime: ", endTime);
   let transactionDates = {};
@@ -388,7 +388,7 @@ accountSchema.statics.getOverallNumbers = async (
   return result;
 };
 
-accountSchema.statics.getMoneyInBusiness = async (businessId) => {
+accountSchema.statics.getMoneyInBusiness = async function (businessId) {
   const moneyInBusiness = {
     total: 0,
     accounts: [],
@@ -408,7 +408,8 @@ accountSchema.statics.getMoneyInBusiness = async (businessId) => {
       // );
       // exchangeRate = response.data.amount;
       const response = await axios.get(
-        `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+        // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+        `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
       );
       exchangeRate = response.data.conversion_rates[business.currency];
     }

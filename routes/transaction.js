@@ -13,15 +13,21 @@ router.post("/transaction", isAuth, transactionController.createTransaction);
 router.put("/transaction", isAuth, transactionController.updateTransaction);
 
 router.delete(
-  "/transaction/:transactionId",
+  "/transactions",
   isAuth,
-  transactionController.deleteTransaction
+  transactionController.deleteTransactions
 );
 
 router.post(
   "/transaction/cancelRepetition",
   isAuth,
   transactionController.cancelRepetition
+);
+
+router.put(
+  "/transaction/updatePlannedTransaction/:transactionId",
+  isAuth,
+  transactionController.updatePlannedTransaction
 );
 
 module.exports = router;
