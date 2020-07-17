@@ -195,7 +195,7 @@ transactionSchema.methods.addPeriodicChain = async function (accountId) {
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = "Failed to add periodic chain.";
+      error.message = error.message;
     }
   }
 };
@@ -363,6 +363,8 @@ transactionSchema.methods.getRangeInAsc = async function (
   upperBound
 ) {
   try {
+    console.log("lowerBound: ", lowerBound);
+    console.log("upperBound: ", upperBound);
     const Transaction = mongoose.model("Transaction", transactionSchema);
     const Account = mongoose.model("Account");
     const startTransaction = await Transaction.find({
@@ -417,41 +419,48 @@ transactionSchema.methods.getRangeInAsc = async function (
 };
 
 transactionSchema.statics.updateBalanceInRange = async function (range) {
-  range.forEach((transaction) => {
-    const doc = transaction._doc;
-    console.log(
-      "transaction: ",
-      doc,
-      "accountBalance: ",
-      +doc.accountBalance,
-      "amount: ",
-      +doc.amount
-    );
-  });
   try {
     let lastBalance = range[0].accountBalance;
     range = range.slice(1);
-    const promises = range.map(async (operation) => {
+    // const promises = range.map(async (operation) => {
+    //   if (operation.type == constants.OPERATION_INCOME) {
+    //     operation.accountBalance = +operation.amount + +lastBalance;
+    //     lastBalance = operation.accountBalance;
+
+    //     return operation.save();
+    //   } else {
+    //     operation.accountBalance = +lastBalance - operation.amount;
+    //     lastBalance = operation.accountBalance;
+    //     return operation.save();
+    //   }
+    // });
+    // return Promise.all(promises);
+
+    const Transaction = mongoose.model("Transaction", transactionSchema);
+    for (const operation of range) {
+      console.log("operation: ", operation);
       if (operation.type == constants.OPERATION_INCOME) {
         operation.accountBalance = +operation.amount + +lastBalance;
         lastBalance = operation.accountBalance;
-
-        return operation.save();
+        // operation = new Transaction(operation);
+        await operation.save();
       } else {
         operation.accountBalance = +lastBalance - operation.amount;
         lastBalance = operation.accountBalance;
-        return operation.save();
+        // operation = new Transaction(operation);
+        await operation.save();
       }
-    });
-    return Promise.all(promises);
+    }
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = "Failed to update balance in range.";
+      error.message = error.message;
     }
     throw error;
   }
 };
+
+transactionSchema.statics;
 
 transactionSchema.methods.updateDate = async function (date) {
   const Transaction = mongoose.model("Transaction", transactionSchema);

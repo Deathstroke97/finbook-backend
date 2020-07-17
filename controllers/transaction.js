@@ -140,6 +140,12 @@ exports.createTransaction = async (req, res, next) => {
       transaction.periodicChainId = transaction._id;
       await transaction.save();
       await transaction.addPeriodicChain(acc._id);
+
+      const range = await transaction.getRangeInAsc(
+        body.date,
+        body.repetitionEndDate
+      );
+      await Transaction.updateBalanceInRange(range);
     }
     res.status(201).json({
       message: "Transaction created!",
@@ -266,7 +272,7 @@ exports.cancelRepetition = async (req, res, next) => {
     periodicChainId: periodicChainId,
     isPlanned: false,
   });
-  for (periodicTransaction of periodicTransactions) {
+  for (const periodicTransaction of periodicTransactions) {
     periodicTransaction.isPeriodic = false;
     periodicTransaction.period = null;
     periodicTransaction.rootOfPeriodicChain = false;
@@ -278,13 +284,13 @@ exports.cancelRepetition = async (req, res, next) => {
     await Transaction.deleteMany({
       periodicChainId: periodicChainId,
       isPlanned: true,
-      _id: { $ne: transactionId },
     });
-    const account = await Account.findById(transaction.account);
-    const diff = 0 - transaction.amount;
+    const range = await transaction.getRangeInAsc(
+      transaction.date,
+      transaction.repetitionEndDate
+    );
 
-    await transaction.updateTransactionsBalance(diff, account);
-    await Transaction.findByIdAndRemove(this._id);
+    await Transaction.updateBalanceInRange(range);
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
