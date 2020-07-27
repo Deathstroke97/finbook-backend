@@ -1,14 +1,31 @@
 const Project = require("../models/project");
 const Account = require("../models/account");
-const { getOverallNumbers } = require("../utils/functions");
+const Transaction = require("../models/transaction");
+const { getOverallNumbers, transformToString } = require("../utils/functions");
+const constants = require("../constants");
 
 exports.getProjects = async (req, res, next) => {
   const businessId = req.businessId;
+  const { type, name, page, rowsPerPage } = req.body;
+  let query = {};
+  query.business = businessId;
+  if (type === constants.COMPLETED) query.isFinished = true;
+  if (name) query.name = new RegExp("^" + name, "i");
+  // if (name) query.name = { $regex: name, $options: "i" };
+
   try {
-    const projects = await Project.find({ business: businessId });
+    const projects = await Project.find(query)
+      .skip(page * rowsPerPage)
+      .limit(rowsPerPage);
+
+    for (const project of projects) {
+      await project.getFactSumTransactions();
+    }
+    const totalItems = await Project.find(query).countDocuments();
     res.status(200).json({
       message: "Projects fetched.",
-      projects: projects,
+      projects: transformToString(projects, constants.COLLECTION_TYPE_PROJECT),
+      totalItems: totalItems,
     });
   } catch (error) {
     if (!error.statusCode) {
@@ -19,7 +36,7 @@ exports.getProjects = async (req, res, next) => {
 };
 
 exports.createProject = async (req, res, next) => {
-  const businessId = req.body.businessId;
+  const businessId = req.businessId;
   const { name, description, planIncome, planOutcome } = req.body;
   const project = new Project({
     name,
@@ -75,6 +92,11 @@ exports.deleteProject = async (req, res, next) => {
   const projectId = req.params.projectId;
   try {
     const project = await Project.findById(projectId);
+    const transactions = await Transaction.find({ project: projectId });
+    for (const transaction of transactions) {
+      transaction.project = null;
+      await transaction.save();
+    }
     if (!project) {
       const error = new Error("Could not find requested project.");
       error.statusCode = 404;
@@ -93,8 +115,10 @@ exports.deleteProject = async (req, res, next) => {
 };
 
 exports.getProject = async (req, res, next) => {
+  const businessId = req.businessId;
   const projectId = req.params.projectId;
-  const { startTime, endTime, businessId } = req.query;
+  const { startTime, endTime, page, rowsPerPage } = req.query;
+
   try {
     const project = await Project.findById(projectId);
     if (!project) {
@@ -102,15 +126,50 @@ exports.getProject = async (req, res, next) => {
       error.statusCode = 404;
       throw error;
     }
-    const numbers = await Account.getOverallNumbers(
+    const overallNumbers = await Account.getOverallNumbers(
       businessId,
       project,
       startTime,
       endTime
     );
+    let transactionDates = {};
+    if (startTime && endTime) {
+      transactionDates = {
+        date: {
+          $gte: startTime,
+          $lte: endTime,
+        },
+      };
+    }
+
+    const transactions = await Transaction.find({
+      project: projectId,
+      ...transactionDates,
+    })
+      .populate("account")
+      .populate("project")
+      .populate("category")
+      .populate("contractor")
+      .sort({ date: -1, createdAt: -1 })
+      .skip(+page * +rowsPerPage)
+      .limit(+rowsPerPage);
+
+    const totalItems = await Transaction.find({
+      project: projectId,
+      ...transactionDates,
+    }).countDocuments();
+
     res.status(200).json({
-      project: project,
-      numbers: numbers,
+      transactions: transformToString(
+        transactions,
+        constants.COLLECTION_TYPE_TRANSACTION
+      ),
+      overallNumbers,
+      totalItems,
+      project: transformToString(
+        [project],
+        constants.COLLECTION_TYPE_PROJECT
+      )[0],
     });
   } catch (error) {
     if (!error.statusCode) {

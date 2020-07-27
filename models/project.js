@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
+const Transaction = require("./transaction");
 const Account = require("./account");
 
 const {
@@ -21,6 +22,7 @@ const {
 } = require("../utils/category");
 
 const Category = require("./category");
+const constants = require("../constants");
 
 const projectSchema = new Schema(
   {
@@ -40,6 +42,14 @@ const projectSchema = new Schema(
     description: String,
     planIncome: Schema.Types.Decimal128,
     planOutcome: Schema.Types.Decimal128,
+    factIncome: {
+      type: Schema.Types.Decimal128,
+      default: 0,
+    },
+    factOutcome: {
+      type: Schema.Types.Decimal128,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
@@ -263,6 +273,27 @@ projectSchema.statics.generateProfitAndLossByProject = async function ({
   calculateOperatingProfit(report);
   report.separateCategoriesReport = separateCategoriesReport;
   return report;
+};
+
+projectSchema.methods.getFactSumTransactions = async function () {
+  const Transaction = mongoose.model("Transaction");
+  const transactions = await Transaction.find({
+    project: this._id,
+    isPlanned: false,
+  });
+  let factIncome = 0;
+  let factOutcome = 0;
+  transactions.forEach((transaction) => {
+    if (transaction.type === constants.OPERATION_INCOME) {
+      factIncome = factIncome + +transaction.amount;
+    }
+    if (transaction.type === constants.OPERATION_OUTCOME) {
+      factOutcome = factOutcome + +transaction.amount;
+    }
+  });
+  this.factIncome = factIncome;
+  this.factOutcome = factOutcome;
+  await this.save();
 };
 
 const Project = mongoose.model("Project", projectSchema);

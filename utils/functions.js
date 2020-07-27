@@ -129,13 +129,24 @@ exports.filterEmptyCategoriesProfitAndLoss = (report) => {
   );
 };
 
-exports.transform = (array, dataType) => {
+exports.transformToString = (array, dataType) => {
   if (dataType === "transaction") {
     array = array.map((el) => {
       return {
         ...el._doc,
         amount: parseFloat(el.amount).toFixed(2),
         accountBalance: parseFloat(el.accountBalance).toFixed(2),
+      };
+    });
+  }
+  if (dataType === "project") {
+    array = array.map((el) => {
+      return {
+        ...el._doc,
+        planIncome: parseFloat(el.planIncome).toFixed(2),
+        planOutcome: parseFloat(el.planOutcome).toFixed(2),
+        factIncome: parseFloat(el.factIncome).toFixed(2),
+        factOutcome: parseFloat(el.factOutcome).toFixed(2),
       };
     });
   }

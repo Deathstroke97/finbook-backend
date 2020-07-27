@@ -5,8 +5,9 @@ const Obligation = require("../models/obligation");
 const Contractor = require("../models/contractor");
 
 const constants = require("../constants");
-const { transform } = require("../utils/functions");
+const { transformToString } = require("../utils/functions");
 const { OPERATION_INCOME } = require("../constants");
+const Project = require("../models/project");
 
 exports.getTransactions = async (req, res, next) => {
   const businessId = req.businessId;
@@ -43,7 +44,7 @@ exports.getTransactions = async (req, res, next) => {
     );
 
     const moneyInBusiness = await Account.getMoneyInBusiness(businessId);
-    console.log("query: ", query);
+    // console.log("query: ", query);
 
     const totalItems = await Transaction.find(query).countDocuments();
 
@@ -58,7 +59,10 @@ exports.getTransactions = async (req, res, next) => {
 
     res.status(200).json({
       message: "Transactions fetched successfully.",
-      transactions: transform(transactions, "transaction"),
+      transactions: transformToString(
+        transactions,
+        constants.COLLECTION_TYPE_TRANSACTION
+      ),
       overallNumbers: overallNumbers,
       moneyInBusiness: moneyInBusiness,
       totalItems: totalItems,
@@ -79,6 +83,7 @@ exports.createTransaction = async (req, res, next) => {
   try {
     const acc = await Account.findById(account);
     let amountLast = +acc.balance;
+    let accountBalance = amountLast;
 
     const startTransaction = await Transaction.find({
       business: businessId,
@@ -93,14 +98,15 @@ exports.createTransaction = async (req, res, next) => {
     if (startTransaction.length === 0) {
       amountLast = +acc.initialBalance;
     }
+    if (type === constants.OPERATION_INCOME) {
+      accountBalance = accountBalance + +amount;
+    }
+    if (type === constants.OPERATION_OUTCOME) {
+      accountBalance = accountBalance - amount;
+    }
 
-    const accountBalance =
-      type === constants.OPERATION_INCOME
-        ? amountLast + +amount
-        : amountLast - amount;
-
-    const isPlanned = moment(date) > moment() ? true : false;
-
+    const isPlanned =
+      moment(date).format("YYYY-MM-DD") > moment().format("YYYY-MM-DD");
     const transaction = new Transaction({
       business: businessId,
       date: body.date,
@@ -135,7 +141,7 @@ exports.createTransaction = async (req, res, next) => {
       }
     }
 
-    if (body.isPeriodic && body.period) {
+    if (body.isPeriodic && body.period && body.repetitionEndDate) {
       transaction.rootOfPeriodicChain = true;
       transaction.periodicChainId = transaction._id;
       await transaction.save();
@@ -208,7 +214,8 @@ exports.updateTransaction = async (req, res, next) => {
     }
 
     if (period !== transaction.period) {
-      await transaction.updatePeriod();
+      this.repetitionEndDate = repetitionEndDate;
+      await transaction.updatePeriod(period);
     }
 
     if (isPeriodic && !transaction.isPeriodic) {
@@ -289,7 +296,6 @@ exports.cancelRepetition = async (req, res, next) => {
       transaction.date,
       transaction.repetitionEndDate
     );
-
     await Transaction.updateBalanceInRange(range);
   } catch (error) {
     if (!error.statusCode) {

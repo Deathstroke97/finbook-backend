@@ -28,4 +28,10 @@ module.exports = Object.freeze({
 
   INCOME: 1,
   OUTCOME: 2,
+  COLLECTION_TYPE_PROJECT: "project",
+  COLLECTION_TYPE_TRANSACTION: "transaction",
+  COLLECTION_TYPE_CATEGORY: "category",
+  COLLECTION_TYPE_ACCOUNT: "account",
+  COLLECTION_TYPE_OBLIGATION: "obligation",
+  COLLECTION_TYPE_CONTRACTOR: "contractor",
 });

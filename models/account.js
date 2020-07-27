@@ -5,6 +5,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const moment = require("moment");
 const axios = require("axios");
 const Business = require("./business");
+const { getGrossProfit, getProfitability } = require("../utils/project");
 
 const { populateWithBuckets, calculateBalance } = require("../utils/functions");
 const {
@@ -236,8 +237,6 @@ accountSchema.statics.getOverallNumbers = async function (
   startTime,
   endTime
 ) {
-  console.log("startTime: ", startTime);
-  console.log("endTime: ", endTime);
   let transactionDates = {};
   if (startTime && endTime) {
     transactionDates = {
@@ -327,14 +326,22 @@ accountSchema.statics.getOverallNumbers = async function (
     totalIncome: {
       fact: 0,
       plan: 0,
+      percent: 0,
     },
     totalOutcome: {
       fact: 0,
       plan: 0,
+      percent: 0,
     },
     totalBalance: {
       fact: 0,
       plan: 0,
+      percent: 0,
+    },
+    profitability: {
+      fact: 0,
+      plan: 0,
+      percent: 0,
     },
   };
   const business = await Business.findById(businessId);
@@ -351,13 +358,15 @@ accountSchema.statics.getOverallNumbers = async function (
 
     let exchangeRate = 1;
     if (account.currency != business.currency) {
-      console.log("account.currency: ", account.currency);
-      console.log("business.currency: ", business.currency);
+      // console.log("account.currency: ", account.currency);
+      // console.log("business.currency: ", business.currency);
 
       // const response = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      //   // `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
       // );
       // exchangeRate = response.data[`${account.currency}_${business.currency}`];
+      exchangeRate = 1;
       // *second option
       // const response = await axios.get(
       //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
@@ -366,15 +375,15 @@ accountSchema.statics.getOverallNumbers = async function (
       // exchangeRate = response.data.amount;
       // *third option
 
-      const response = await axios.get(
-        // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
-        `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
-      );
+      // const response = await axios.get(
+      //   // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+      //   `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
+      // );
 
-      exchangeRate = response.data.conversion_rates[business.currency];
-      console.log("response-response: ", exchangeRate);
+      // exchangeRate = response.data.conversion_rates[business.currency];
+      // console.log("response-response: ", exchangeRate);
     }
-    console.log("exchangeRate: ", exchangeRate);
+    // console.log("exchangeRate: ", exchangeRate);
     result.totalIncome.fact += exchangeRate * income;
     result.totalOutcome.fact += exchangeRate * outcome;
   }
@@ -384,6 +393,39 @@ accountSchema.statics.getOverallNumbers = async function (
   if (project) {
     result.totalIncome.plan = +project.planIncome;
     result.totalOutcome.plan = +project.planOutcome;
+    result.totalBalance.plan =
+      result.totalIncome.plan - result.totalOutcome.plan;
+    // сalculating percentage values fact/plan
+    //income
+    if (+project.planIncome !== 0) {
+      const percent = (
+        (result.totalIncome.fact * 100) /
+        result.totalIncome.plan
+      ).toFixed(2);
+      result.totalIncome.percent = percent > 100 ? 100 : +percent;
+    }
+    //outcome
+    if (+project.planOutcome !== 0) {
+      const percent = (
+        (result.totalOutcome.fact * 100) /
+        result.totalOutcome.plan
+      ).toFixed(2);
+      result.totalOutcome.percent = percent > 100 ? 100 : +percent;
+    }
+    //balance
+    if (+project.planIncome - project.planOutcome !== 0) {
+      const difference = +project.planIncome - project.planOutcome;
+      const percent = (result.totalBalance.fact * 100) / difference;
+      result.totalBalance.percent = percent > 100 ? 100 : +percent;
+    }
+    //profitability
+    const grossProfit = getGrossProfit(result);
+    result.profitability = getProfitability(grossProfit, project, result);
+    if (+result.profitability.plan !== 0) {
+      const percent =
+        (result.profitability.fact * 100) / result.profitability.plan;
+      result.profitability.percent = percent > 100 ? 100 : +percent;
+    }
   }
   return result;
 };
@@ -400,18 +442,20 @@ accountSchema.statics.getMoneyInBusiness = async function (businessId) {
     let exchangeRate = 1;
     if (account.currency != business.currency) {
       // const response = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      //   // `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
       // );
       // exchangeRate = response.data[`${account.currency}_${business.currency}`];
+      exchangeRate = 1;
       // const response = await axios.get(
       //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
       // );
       // exchangeRate = response.data.amount;
-      const response = await axios.get(
-        // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
-        `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
-      );
-      exchangeRate = response.data.conversion_rates[business.currency];
+      // const response = await axios.get(
+      //   // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+      //   `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
+      // );
+      // exchangeRate = response.data.conversion_rates[business.currency];
     }
     moneyInBusiness.total += exchangeRate * account.balance;
     moneyInBusiness.accounts.push({

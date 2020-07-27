@@ -302,4 +302,32 @@ const constructProfitAndLossByProject = (
   );
 };
 
+exports.getGrossProfit = (result) => {
+  return {
+    fact: (result.totalIncome.fact - result.totalOutcome.fact).toFixed(2),
+    plan: (result.totalIncome.plan - result.totalOutcome.plan).toFixed(2),
+  };
+};
+
+exports.getProfitability = (grossProfit, project, result) => {
+  let profitability = {};
+  if (+result.totalIncome.fact === 0) {
+    profitability.fact = 0;
+  }
+  if (+project.planIncome === 0) {
+    profitability.plan = 0;
+  }
+  if (+result.totalIncome.fact !== 0) {
+    profitability.fact = parseFloat(
+      ((grossProfit.fact * 100) / +result.totalIncome.fact).toFixed(2)
+    );
+  }
+  if (+project.planIncome !== 0) {
+    profitability.plan = parseFloat(
+      ((grossProfit.plan * 100) / +project.planIncome).toFixed(2)
+    );
+  }
+  return profitability;
+};
+
 exports.constructProfitAndLossByProject = constructProfitAndLossByProject;

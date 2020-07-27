@@ -6,7 +6,7 @@ const projectController = require("../controllers/project");
 
 const isAuth = require("../middleware/is_auth");
 
-router.get("/projects", isAuth, projectController.getProjects);
+router.post("/projects", isAuth, projectController.getProjects);
 
 router.post("/project", isAuth, projectController.createProject);
 
