@@ -6,7 +6,7 @@ const contractorController = require("../controllers/contractor");
 
 const isAuth = require("../middleware/is_auth");
 
-router.get("/contractors", isAuth, contractorController.getContractors);
+router.post("/contractors", isAuth, contractorController.getContractors);
 
 router.post("/contractor", isAuth, contractorController.createContractor);
 

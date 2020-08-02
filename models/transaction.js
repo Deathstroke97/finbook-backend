@@ -489,10 +489,14 @@ transactionSchema.methods.updateIsObligation = async function (
   isObligation,
   contractorId
 ) {
+  console.log("isObligation: ", isObligation, "contractorId: ", contractorId);
   if (!isObligation && this.isObligation) {
+    console.log("here1");
     this.isObligation = false;
     if (moment(this.date) < moment()) {
+      console.log("here");
       if (!this.isPlanned) {
+        console.log("here2");
         const contractor = await Contractor.findById(contractorId);
         if (this.type === constants.OPERATION_INCOME) {
           contractor.balance = +contractor.balance + +this.amount;
@@ -502,6 +506,7 @@ transactionSchema.methods.updateIsObligation = async function (
         }
         await contractor.save();
         await Obligation.findByIdAndRemove(this.obligationId);
+        this.obligationId = null;
       }
     }
   }
@@ -510,6 +515,7 @@ transactionSchema.methods.updateIsObligation = async function (
     if (moment(this.date) < moment()) {
       await this.attachObligation();
     }
+    console.log("this: ", this._doc);
   }
 };
 
@@ -560,11 +566,12 @@ transactionSchema.methods.delete = async function () {
   if (this.isObligation && !this.isPlanned) {
     const contractor = await Contractor.findById(this.contractor);
     if (contractor) {
+      //signs was reverted
       if (this.type === constants.OPERATION_INCOME) {
-        contractor.balance = +contractor.balance - this.amount;
+        contractor.balance = +contractor.balance + +this.amount;
       }
       if (this.type === constants.OPERATION_OUTCOME) {
-        contractor.balance = +contractor.balance + +this.amount;
+        contractor.balance = +contractor.balance - this.amount;
       }
       await contractor.save();
       await Obligation.findByIdAndRemove(this.obligationId);

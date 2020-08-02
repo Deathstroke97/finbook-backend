@@ -2,7 +2,7 @@ const Account = require("../models/account");
 
 exports.getAccounts = async (req, res, next) => {
   const businessId = req.businessId;
-  console.log("businessId: ", businessId);
+
   try {
     const accounts = await Account.find({ business: businessId });
     res.status(200).json({

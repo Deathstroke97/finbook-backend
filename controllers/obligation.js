@@ -18,17 +18,17 @@ exports.getObligations = async (req, res, next) => {
 };
 
 exports.createObligation = async (req, res, next) => {
-  const businessId = req.body.businessId;
-  const { amount, type, contractorId, currency, description, date } = req.body;
+  const businessId = req.businessId;
+  const { amount, type, contractor, currency, description, date } = req.body;
 
   const obligation = new Obligation({
+    business: businessId,
     amount,
     type,
     date,
-    contractor: contractorId,
+    contractor,
     currency,
     description,
-    business: businessId,
   });
   try {
     await obligation.save();
@@ -46,7 +46,7 @@ exports.createObligation = async (req, res, next) => {
 
 exports.updateObligation = async (req, res, next) => {
   const obligationId = req.params.obligationId;
-  const { amount, type, contractorId, currency, description, date } = req.body;
+  const { amount, type, currency, description, date } = req.body;
 
   try {
     const obligation = await Obligation.findById(obligationId);
@@ -59,7 +59,6 @@ exports.updateObligation = async (req, res, next) => {
     obligation.amount = amount;
     obligation.description = description;
     obligation.type = type;
-    obligation.contractor = contractorId;
     obligation.currency = currency;
     obligation.date = date;
     await obligation.save();

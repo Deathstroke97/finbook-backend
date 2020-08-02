@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
-
+const Business = mongoose.model("Business");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const axios = require("axios");
 const Account = require("./account");
 const moment = require("moment");
+const Obligation = require("./obligation");
 
 const { populateWithBuckets, calculateBalance } = require("../utils/functions");
 const {
@@ -191,12 +192,24 @@ contractorSchema.statics.getNumbers = async function (contractorId) {
   };
 };
 
-contractorSchema.statics.getNumbers2 = async function (
+contractorSchema.statics.getOverallNumbers = async function (
   businessId,
-  contractorId
+  contractorId,
+  startTime,
+  endTime
 ) {
   const Account = mongoose.model("Account");
-  const Business = mongoose.model("Business");
+
+  let transactionDates = {};
+  if (startTime && endTime) {
+    transactionDates = {
+      "transactions.date": {
+        $gte: new Date(startTime),
+        $lte: new Date(endTime),
+      },
+    };
+  }
+
   const aggResult = await Account.aggregate([
     {
       $match: {
@@ -216,8 +229,10 @@ contractorSchema.statics.getNumbers2 = async function (
     },
     {
       $match: {
+        ...transactionDates,
         "transactions.isPlanned": false,
         "transactions.contractor": ObjectId(contractorId),
+        // "transactions.isObligation": false,
       },
     },
     {
@@ -229,6 +244,7 @@ contractorSchema.statics.getNumbers2 = async function (
     },
     {
       $project: {
+        _id: 1,
         currency: 1,
         incomeOperations: {
           $filter: {
@@ -251,59 +267,129 @@ contractorSchema.statics.getNumbers2 = async function (
   const result = {
     totalIncome: 0,
     totalOutcome: 0,
-    totalIncomeWithObligation: 0,
-    totalOutcomeWithObligation: 0,
-    totalBalance: 0,
   };
   const business = await Business.findById(businessId);
 
   for (const account of aggResult) {
     let income = 0;
     let outcome = 0;
-    let incomeWithObligation = 0;
-    let outcomeWithObligation = 0;
-    account.incomeOperations.forEach((operation) => {
-      if (operation.isObligation) {
-        incomeWithObligation += +operation.amount;
-      }
-      income += +operation.amount;
-    });
-    account.outcomeOperations.forEach((operation) => {
-      if (operation.isObligation) {
-        outcomeWithObligation += +operation.amount;
-      }
-      outcome += +operation.amount;
-    });
+
+    account.incomeOperations.forEach(
+      (operation) => (income += +operation.amount)
+    );
+    account.outcomeOperations.forEach(
+      (operation) => (outcome += +operation.amount)
+    );
 
     let exchangeRate = 1;
     if (account.currency != business.currency) {
-      // const response = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
-      // );
-      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
-      // const response = await axios.get(
-      //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
-      // );
-      // exchangeRate = response.data.amount;
       const response = await axios.get(
-        `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
+        `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
       );
-      exchangeRate = response.data.conversion_rates[business.currency];
+      exchangeRate = response.data[`${account.currency}_${business.currency}`];
     }
 
     result.totalIncome += exchangeRate * income;
     result.totalOutcome += exchangeRate * outcome;
-    result.totalIncomeWithObligation += exchangeRate * incomeWithObligation;
-    result.totalOutcomeWithObligation += exchangeRate * outcomeWithObligation;
-    result.totalBalance =
-      result.totalIncomeWithObligation - result.totalOutcomeWithObligation;
-    delete result.totalIncomeWithObligation;
-    delete result.totalOutcomeWithObligation;
   }
 
   return result;
 };
 
+contractorSchema.statics.getBalance = async function (
+  businessId,
+  contractorId
+) {
+  const Account = mongoose.model("Account");
+  const aggResult = await Account.aggregate([
+    {
+      $match: {
+        business: ObjectId(businessId),
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "_id",
+        foreignField: "account",
+        as: "transactions",
+      },
+    },
+    {
+      $unwind: "$transactions",
+    },
+    {
+      $match: {
+        "transactions.isPlanned": false,
+        "transactions.contractor": ObjectId(contractorId),
+        "transactions.isObligation": true,
+      },
+    },
+    {
+      $group: {
+        _id: { account: "$name" },
+        currency: { $first: "$currency" },
+        operations: { $push: "$transactions" },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        currency: 1,
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
+  ]);
+  const transactions = {
+    totalIncome: 0,
+    totalOutcome: 0,
+    totabalance: 0,
+  };
+  const business = await Business.findById(businessId);
+
+  for (const account of aggResult) {
+    let income = 0;
+    let outcome = 0;
+
+    account.incomeOperations.forEach(
+      (operation) => (income += +operation.amount)
+    );
+    account.outcomeOperations.forEach(
+      (operation) => (outcome += +operation.amount)
+    );
+
+    let exchangeRate = 1;
+    if (account.currency != business.currency) {
+      const response = await axios.get(
+        `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
+      );
+      exchangeRate = response.data[`${account.currency}_${business.currency}`];
+    }
+
+    transactions.totalIncome += exchangeRate * income;
+    transactions.totalOutcome += exchangeRate * outcome;
+  }
+  transactions.totabalance =
+    (transactions.totalIncome - transactions.totalOutcome) * -1;
+  const obligationsBalance = await Obligation.getBalance(
+    businessId,
+    contractorId
+  );
+  return transactions.totabalance + obligationsBalance;
+};
 const Contractor = mongoose.model("Contractor", contractorSchema);
 
 module.exports = Contractor;

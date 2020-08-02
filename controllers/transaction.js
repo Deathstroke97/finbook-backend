@@ -38,6 +38,7 @@ exports.getTransactions = async (req, res, next) => {
 
     const overallNumbers = await Account.getOverallNumbers(
       businessId,
+      account,
       null,
       queryData.createTime.$gte,
       queryData.createTime.$lte
@@ -129,6 +130,7 @@ exports.createTransaction = async (req, res, next) => {
     await transaction.updateTransactionsBalanceOnCreate();
 
     if (!isPlanned) {
+      console.log("here man: ");
       if (type === constants.OPERATION_INCOME) {
         acc.balance = +acc.balance + +amount;
       }
@@ -137,6 +139,7 @@ exports.createTransaction = async (req, res, next) => {
       }
       await acc.save();
       if (body.isObligation) {
+        console.log("here 2");
         await transaction.attachObligation();
       }
     }
@@ -206,7 +209,8 @@ exports.updateTransaction = async (req, res, next) => {
     }
 
     if (!isObligation && transaction.isObligation) {
-      await transaction.updateIsObligation(!isObligation, contractor);
+      console.log("if statement: ", req.body);
+      await transaction.updateIsObligation(isObligation, contractor);
     }
 
     if (isObligation && !transaction.isObligation) {

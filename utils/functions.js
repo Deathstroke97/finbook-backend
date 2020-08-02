@@ -1,15 +1,10 @@
 const moment = require("moment");
 const mongoose = require("mongoose");
-const Project = require("../models/project");
-const Transaction = require("../models/transaction");
-const ObjectId = mongoose.Types.ObjectId;
-const Business = require("../models/business");
-const axios = require("axios");
 
-const { aggregate } = require("../models/contractor");
-const e = require("express");
+const constants = require("../constants");
 
 exports.populateTransactions = (aggResult) => {
+  //need to change to mongoose.model("Account")
   const Account = require("../models/account");
   const Category = require("../models/category");
   const Contractor = require("../models/contractor");
@@ -129,8 +124,8 @@ exports.filterEmptyCategoriesProfitAndLoss = (report) => {
   );
 };
 
-exports.transformToString = (array, dataType) => {
-  if (dataType === "transaction") {
+exports.transformToString = (array, collectionType) => {
+  if (collectionType === constants.COLLECTION_TYPE_TRANSACTION) {
     array = array.map((el) => {
       return {
         ...el._doc,
@@ -139,7 +134,7 @@ exports.transformToString = (array, dataType) => {
       };
     });
   }
-  if (dataType === "project") {
+  if (collectionType === constants.COLLECTION_TYPE_PROJECT) {
     array = array.map((el) => {
       return {
         ...el._doc,
@@ -147,6 +142,22 @@ exports.transformToString = (array, dataType) => {
         planOutcome: parseFloat(el.planOutcome).toFixed(2),
         factIncome: parseFloat(el.factIncome).toFixed(2),
         factOutcome: parseFloat(el.factOutcome).toFixed(2),
+      };
+    });
+  }
+  if (collectionType === constants.COLLECTION_TYPE_CONTRACTOR) {
+    array = array.map((el) => {
+      return {
+        ...el._doc,
+        balance: parseFloat(el.balance).toFixed(2),
+      };
+    });
+  }
+  if (collectionType === constants.COLLECTION_TYPE_OBLIGATION) {
+    array = array.map((el) => {
+      return {
+        ...el._doc,
+        amount: parseFloat(el.amount).toFixed(2),
       };
     });
   }

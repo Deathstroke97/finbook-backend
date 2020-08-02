@@ -74,7 +74,7 @@ exports.login = async (req, res, next) => {
       // { expiresIn: "1h" }
     );
     const business = await Business.findById(loadedUser.business);
-    console.log("business: ", business);
+
     res.status(200).json({
       token: token,
       userId: loadedUser._id.toString(),

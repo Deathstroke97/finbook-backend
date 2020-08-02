@@ -128,6 +128,7 @@ exports.getProject = async (req, res, next) => {
     }
     const overallNumbers = await Account.getOverallNumbers(
       businessId,
+      null,
       project,
       startTime,
       endTime
@@ -147,9 +148,9 @@ exports.getProject = async (req, res, next) => {
       ...transactionDates,
     })
       .populate("account")
-      .populate("project")
       .populate("category")
       .populate("contractor")
+      .populate("project")
       .sort({ date: -1, createdAt: -1 })
       .skip(+page * +rowsPerPage)
       .limit(+rowsPerPage);

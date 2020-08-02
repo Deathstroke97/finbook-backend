@@ -233,6 +233,7 @@ accountSchema.statics.generateCashFlowByAccounts = async function ({
 
 accountSchema.statics.getOverallNumbers = async function (
   businessId,
+  account,
   project,
   startTime,
   endTime
@@ -248,6 +249,9 @@ accountSchema.statics.getOverallNumbers = async function (
   }
   const projectInfo = project
     ? { "transactions.project": ObjectId(project._id) }
+    : {};
+  const accountInfo = account
+    ? { "transactions.account": ObjectId(account) }
     : {};
 
   const aggResult = await Account.aggregate([
@@ -276,6 +280,7 @@ accountSchema.statics.getOverallNumbers = async function (
         ...transactionDates,
         "transactions.isPlanned": false,
         ...projectInfo,
+        ...accountInfo,
       },
     },
     {
@@ -358,32 +363,13 @@ accountSchema.statics.getOverallNumbers = async function (
 
     let exchangeRate = 1;
     if (account.currency != business.currency) {
-      // console.log("account.currency: ", account.currency);
-      // console.log("business.currency: ", business.currency);
-
       // const response = await axios.get(
-      //   // `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
       //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
       // );
       // exchangeRate = response.data[`${account.currency}_${business.currency}`];
       exchangeRate = 1;
-      // *second option
-      // const response = await axios.get(
-      //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
-      // );
-
-      // exchangeRate = response.data.amount;
-      // *third option
-
-      // const response = await axios.get(
-      //   // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
-      //   `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
-      // );
-
-      // exchangeRate = response.data.conversion_rates[business.currency];
-      // console.log("response-response: ", exchangeRate);
     }
-    // console.log("exchangeRate: ", exchangeRate);
+
     result.totalIncome.fact += exchangeRate * income;
     result.totalOutcome.fact += exchangeRate * outcome;
   }
