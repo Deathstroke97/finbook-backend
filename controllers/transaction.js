@@ -84,7 +84,7 @@ exports.createTransaction = async (req, res, next) => {
   try {
     const acc = await Account.findById(account);
     let amountLast = +acc.balance;
-    let accountBalance = amountLast;
+    let accountBalance = +acc.balance;
 
     const startTransaction = await Transaction.find({
       business: businessId,
@@ -130,7 +130,7 @@ exports.createTransaction = async (req, res, next) => {
     });
 
     await transaction.save();
-    await transaction.updateTransactionsBalanceOnCreate();
+    // await transaction.updateTransactionsBalanceOnCreate();
 
     if (!isPlanned) {
       if (type === constants.OPERATION_INCOME) {
@@ -150,13 +150,13 @@ exports.createTransaction = async (req, res, next) => {
       transaction.periodicChainId = transaction._id;
       await transaction.save();
       await transaction.addPeriodicChain(acc._id);
-
-      const range = await transaction.getRangeInAsc(
-        body.date,
-        body.repetitionEndDate
-      );
-      await Transaction.updateBalanceInRange(range);
     }
+    const range = await transaction.getRangeInAsc(
+      body.date,
+      body.repetitionEndDate ? body.repetitionEndDate : null
+    );
+
+    await Transaction.updateBalanceInRange(range);
 
     res.status(201).json({
       message: "Transaction created!",

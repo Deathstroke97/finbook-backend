@@ -203,38 +203,38 @@ transactionSchema.statics.amountToString = function (transactions) {
   return transactions;
 };
 
-transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () {
-  try {
-    const Transaction = mongoose.model("Transaction", transactionSchema);
-    const transactions = await Transaction.find({
-      business: this.business,
-      account: this.account,
-      date: { $gte: this.date },
-      createdAt: { $gt: this.createdAt },
-    });
-    let promises = [];
-    if (transactions.length > 0) {
-      if (this.type === constants.OPERATION_INCOME) {
-        promises = transactions.map(async (operation) => {
-          operation.accountBalance = +operation.accountBalance + +this.amount;
-          return operation.save();
-        });
-      } else {
-        promises = transactions.map(async (operation) => {
-          operation.accountBalance = +operation.accountBalance - this.amount;
-          return operation.save();
-        });
-      }
-      return Promise.all(promises);
-    }
-  } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-      error.message = "Failed to update transactions's balance.";
-    }
-    throw error;
-  }
-};
+// transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () {
+//   try {
+//     const Transaction = mongoose.model("Transaction", transactionSchema);
+//     const transactions = await Transaction.find({
+//       business: this.business,
+//       account: this.account,
+//       date: { $gte: this.date },
+//       createdAt: { $lt: this.createdAt },
+//     });
+//     let promises = [];
+//     if (transactions.length > 0) {
+//       if (this.type === constants.OPERATION_INCOME) {
+//         promises = transactions.map(async (operation) => {
+//           operation.accountBalance = +operation.accountBalance + +this.amount;
+//           return operation.save();
+//         });
+//       } else {
+//         promises = transactions.map(async (operation) => {
+//           operation.accountBalance = +operation.accountBalance - this.amount;
+//           return operation.save();
+//         });
+//       }
+//       return Promise.all(promises);
+//     }
+//   } catch (error) {
+//     if (!error.statusCode) {
+//       error.statusCode = 500;
+//       error.message = "Failed to update transactions's balance.";
+//     }
+//     throw error;
+//   }
+// };
 
 transactionSchema.methods.updateTransactionsBalance = async function (
   diff,
@@ -252,6 +252,7 @@ transactionSchema.methods.updateTransactionsBalance = async function (
         {
           ...filter,
           date: { $eq: this.date },
+          // createdAt: { $lt: this.createdAt },
           createdAt: { $gte: this.createdAt },
         },
         {
@@ -368,12 +369,18 @@ transactionSchema.methods.getRangeInAsc = async function (
       .limit(1);
 
     if (startTransaction.length === 0) {
+      let dateQuery = {};
+      if (upperBound) {
+        dateQuery = {
+          date: {
+            $lte: upperBound,
+          },
+        };
+      }
       const range = await Transaction.find({
         business: this.business,
         account: this.account,
-        date: {
-          $lte: upperBound,
-        },
+        ...dateQuery,
       }).sort({ date: 1, createdAt: 1 });
 
       const account = await Account.findById(this.account);
@@ -390,13 +397,30 @@ transactionSchema.methods.getRangeInAsc = async function (
       return range;
     }
 
+    let dateQuery = {};
+    if (upperBound) {
+      dateQuery = {
+        $or: [
+          {
+            date: {
+              $eq: lowerBound,
+            },
+            createdAt: { $lt: this.createdAt },
+          },
+          {
+            date: {
+              $gt: lowerBound,
+              $lte: upperBound,
+            },
+          },
+        ],
+      };
+    }
+
     const range = await Transaction.find({
       business: this.business,
       account: this.account,
-      date: {
-        $gte: lowerBound,
-        $lte: upperBound,
-      },
+      ...dateQuery,
     }).sort({ date: 1, createdAt: 1 });
 
     return range;
