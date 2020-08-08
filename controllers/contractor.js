@@ -6,22 +6,19 @@ const constants = require("../constants");
 
 exports.getContractors = async (req, res, next) => {
   const businessId = req.businessId;
-  const { startTime, endTime, page, rowsPerPage } = req.body;
+  const { startTime, endTime, page, rowsPerPage, name } = req.body;
   try {
-    let transactionDates = {};
+    let query = {};
+    query.business = businessId;
     if (startTime && endTime) {
-      transactionDates = {
-        createdAt: {
-          $gte: startTime,
-          $lte: endTime,
-        },
+      query.createdAt = {
+        $gte: startTime,
+        $lte: endTime,
       };
     }
+    if (name) query.name = new RegExp("^" + name, "i");
 
-    const contractors = await Contractor.find({
-      business: businessId,
-      ...transactionDates,
-    })
+    const contractors = await Contractor.find(query)
       .skip(page * rowsPerPage)
       .limit(rowsPerPage);
 
@@ -31,10 +28,7 @@ exports.getContractors = async (req, res, next) => {
       await contractor.save();
     }
 
-    const totalItems = await Contractor.find({
-      business: businessId,
-      ...transactionDates,
-    }).countDocuments();
+    const totalItems = await Contractor.find(query).countDocuments();
 
     res.status(200).json({
       message: "contractors fetched.",
@@ -53,22 +47,15 @@ exports.getContractors = async (req, res, next) => {
 };
 
 exports.createContractor = async (req, res, next) => {
-  const businessId = req.body.businessId;
-  const {
-    name,
-    description,
-    contactPerson,
-    phoneNumber,
-    email,
-    balance,
-  } = req.body;
+  const businessId = req.businessId;
+  const { name, description, contactName, phoneNumber, email } = req.body;
   const contractor = new Contractor({
     name,
     description,
-    contactPerson,
+    contactName,
     phoneNumber,
     email,
-    balance,
+
     business: businessId,
   });
   try {
@@ -87,14 +74,7 @@ exports.createContractor = async (req, res, next) => {
 
 exports.updateContractor = async (req, res, next) => {
   const contractorId = req.params.contractorId;
-  const {
-    name,
-    description,
-    contactPerson,
-    phoneNumber,
-    email,
-    balance,
-  } = req.body;
+  const { name, description, contactName, phoneNumber, email } = req.body;
 
   try {
     const contractor = await Contractor.findById(contractorId);
@@ -105,10 +85,9 @@ exports.updateContractor = async (req, res, next) => {
     }
     contractor.name = name;
     contractor.description = description;
-    contractor.contactPerson = contactPerson;
+    contractor.contactName = contactName;
     contractor.phoneNumber = phoneNumber;
     contractor.email = email;
-    contractor.balance = balance;
 
     await contractor.save();
     res.status(200).json({
@@ -242,6 +221,7 @@ exports.getContractor = async (req, res, next) => {
       ),
       totalItems,
       obligationTotalItems,
+      contractor,
     });
   } catch (error) {
     if (!error.statusCode) {

@@ -4,8 +4,14 @@ const router = express.Router();
 
 const reportController = require("../controllers/report");
 
-router.post("/report/cashflow", reportController.getCashFlowReport);
+const isAuth = require("../middleware/is_auth");
 
-router.post("/report/profitAndLoss", reportController.getProfitAndLossReport);
+router.post("/report/cashflow", isAuth, reportController.getCashFlowReport);
+
+router.post(
+  "/report/profitAndLoss",
+  isAuth,
+  reportController.getProfitAndLossReport
+);
 
 module.exports = router;

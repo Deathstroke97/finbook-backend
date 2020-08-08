@@ -93,17 +93,19 @@ exports.createTransaction = async (req, res, next) => {
     })
       .sort({ date: -1, createdAt: -1 })
       .limit(1);
+
     if (startTransaction.length > 0) {
       amountLast = parseFloat(startTransaction[0].accountBalance);
     }
     if (startTransaction.length === 0) {
       amountLast = +acc.initialBalance;
+      accountBalance = +acc.initialBalance;
     }
     if (type === constants.OPERATION_INCOME) {
-      accountBalance = accountBalance + +amount;
+      accountBalance = amountLast + +amount;
     }
     if (type === constants.OPERATION_OUTCOME) {
-      accountBalance = accountBalance - amount;
+      accountBalance = amountLast - +amount;
     }
 
     const isPlanned =
@@ -126,11 +128,11 @@ exports.createTransaction = async (req, res, next) => {
       period: body.period && body.period,
       repetitionEndDate: body.repetitionEndDate && body.repetitionEndDate,
     });
+
     await transaction.save();
     await transaction.updateTransactionsBalanceOnCreate();
 
     if (!isPlanned) {
-      console.log("here man: ");
       if (type === constants.OPERATION_INCOME) {
         acc.balance = +acc.balance + +amount;
       }
@@ -139,7 +141,6 @@ exports.createTransaction = async (req, res, next) => {
       }
       await acc.save();
       if (body.isObligation) {
-        console.log("here 2");
         await transaction.attachObligation();
       }
     }
@@ -156,8 +157,10 @@ exports.createTransaction = async (req, res, next) => {
       );
       await Transaction.updateBalanceInRange(range);
     }
+
     res.status(201).json({
       message: "Transaction created!",
+      transaction: transformToString([transaction], constants.TRANSACTION),
     });
   } catch (error) {
     if (!error.statusCode) {

@@ -367,7 +367,7 @@ accountSchema.statics.getOverallNumbers = async function (
       //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
       // );
       // exchangeRate = response.data[`${account.currency}_${business.currency}`];
-      exchangeRate = 1;
+      // exchangeRate = 1;
     }
 
     result.totalIncome.fact += exchangeRate * income;

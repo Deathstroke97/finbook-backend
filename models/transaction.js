@@ -209,7 +209,8 @@ transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () 
     const transactions = await Transaction.find({
       business: this.business,
       account: this.account,
-      date: { $gt: this.date },
+      date: { $gte: this.date },
+      createdAt: { $gt: this.createdAt },
     });
     let promises = [];
     if (transactions.length > 0) {
@@ -267,7 +268,6 @@ transactionSchema.methods.updateTransactionsBalance = async function (
         transaction.accountBalance = +transaction.accountBalance + diff;
         if (!transaction.isPlanned) {
           account.balance = transaction.accountBalance;
-          console.log("acc.balance2: ", +account.balance);
         }
         return transaction.save();
       });
@@ -381,10 +381,10 @@ transactionSchema.methods.getRangeInAsc = async function (
 
       if (firstTransaction.type === constants.OPERATION_INCOME) {
         firstTransaction.accountBalance =
-          +firstTransaction.amount + +account.initialBalance;
+          +account.initialBalance + +firstTransaction.amount;
       } else {
         firstTransaction.accountBalance =
-          +firstTransaction.amount - account.initialBalance;
+          account.initialBalance - +firstTransaction.amount;
       }
       await firstTransaction.save();
       return range;
@@ -413,6 +413,7 @@ transactionSchema.statics.updateBalanceInRange = async function (range) {
   try {
     if (range.length > 0) {
       let lastBalance = range[0].accountBalance;
+
       range = range.slice(1);
       const promises = range.map(async (operation) => {
         if (operation.type == constants.OPERATION_INCOME) {
@@ -426,7 +427,7 @@ transactionSchema.statics.updateBalanceInRange = async function (range) {
           return operation.save();
         }
       });
-      return Promise.all(promises);
+      await Promise.all(promises);
     }
   } catch (error) {
     if (!error.statusCode) {
@@ -585,11 +586,12 @@ transactionSchema.methods.delete = async function () {
     if (this.type === constants.OPERATION_OUTCOME) {
       account.balance = +account.balance + +this.amount;
     }
+
     await account.save();
   }
   const diff = 0 - this.amount;
-  await this.updateTransactionsBalance(diff, account);
   await Transaction.findByIdAndRemove(this._id);
+  await this.updateTransactionsBalance(diff, account);
 };
 
 const Transaction = mongoose.model("Transaction", transactionSchema);

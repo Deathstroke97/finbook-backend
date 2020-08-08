@@ -46,11 +46,11 @@ const categorySchema = new Schema({
   },
 });
 
-categorySchema.statics.generateCashFlowByCategory = async function ({
+categorySchema.statics.generateCashFlowByCategory = async function (
   businessId,
   queryData,
-  countPlanned,
-}) {
+  countPlanned
+) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
 
   const Category = mongoose.model("Category", categorySchema);
@@ -134,11 +134,11 @@ categorySchema.statics.generateCashFlowByCategory = async function ({
   return report;
 };
 
-categorySchema.statics.generateCashFlowByActivity = async function ({
+categorySchema.statics.generateCashFlowByActivity = async function (
   businessId,
   queryData,
-  countPlanned,
-}) {
+  countPlanned
+) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
 
   const Category = mongoose.model("Category", categorySchema);

@@ -12,15 +12,24 @@ const {
 } = require("../constants");
 
 exports.getCashFlowReport = async (req, res, next) => {
-  const { businessId, queryData, reportBy } = req.body;
+  const businessId = req.businessId;
+  const { queryData, reportBy, countPlanned } = req.body;
   let result = null;
   try {
     switch (reportBy) {
       case CATEGORY:
-        result = await Category.generateCashFlowByCategory(req.body);
+        result = await Category.generateCashFlowByCategory(
+          businessId,
+          queryData,
+          countPlanned
+        );
         break;
       case ACTIVITY:
-        result = await Category.generateCashFlowByActivity(req.body);
+        result = await Category.generateCashFlowByActivity(
+          businessId,
+          queryData,
+          countPlanned
+        );
         break;
       case ACCOUNT:
         result = await Account.generateCashFlowByAccounts(req.body);

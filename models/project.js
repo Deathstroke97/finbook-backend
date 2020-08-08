@@ -3,6 +3,7 @@ const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const Transaction = require("./transaction");
 const Account = require("./account");
+const axios = require("axios");
 
 const {
   calculateBalance,
@@ -40,8 +41,14 @@ const projectSchema = new Schema(
       default: false,
     },
     description: String,
-    planIncome: Schema.Types.Decimal128,
-    planOutcome: Schema.Types.Decimal128,
+    planIncome: {
+      type: Schema.Types.Decimal128,
+      default: 0,
+    },
+    planOutcome: {
+      type: Schema.Types.Decimal128,
+      default: 0,
+    },
     factIncome: {
       type: Schema.Types.Decimal128,
       default: 0,
@@ -276,23 +283,90 @@ projectSchema.statics.generateProfitAndLossByProject = async function ({
 };
 
 projectSchema.methods.getFactSumTransactions = async function () {
-  const Transaction = mongoose.model("Transaction");
-  const transactions = await Transaction.find({
-    project: this._id,
-    isPlanned: false,
-  });
-  let factIncome = 0;
-  let factOutcome = 0;
-  transactions.forEach((transaction) => {
-    if (transaction.type === constants.OPERATION_INCOME) {
-      factIncome = factIncome + +transaction.amount;
+  const Account = mongoose.model("Account");
+  const Business = mongoose.model("Business");
+  const aggResult = await Account.aggregate([
+    {
+      $match: {
+        business: ObjectId(this.business),
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "_id",
+        foreignField: "account",
+        as: "transactions",
+      },
+    },
+    {
+      $unwind: "$transactions",
+    },
+    {
+      $match: {
+        "transactions.isPlanned": false,
+        "transactions.project": ObjectId(this._id),
+      },
+    },
+    {
+      $group: {
+        _id: { account: "$name" },
+        currency: { $first: "$currency" },
+        operations: { $push: "$transactions" },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        currency: 1,
+        incomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "income"] },
+          },
+        },
+        outcomeOperations: {
+          $filter: {
+            input: "$operations",
+            as: "operation",
+            cond: { $eq: ["$$operation.type", "outcome"] },
+          },
+        },
+      },
+    },
+  ]);
+
+  const transactions = {
+    totalIncome: 0,
+    totalOutcome: 0,
+  };
+  const business = await Business.findById(this.business);
+
+  for (const account of aggResult) {
+    let income = 0;
+    let outcome = 0;
+
+    account.incomeOperations.forEach(
+      (operation) => (income += +operation.amount)
+    );
+    account.outcomeOperations.forEach(
+      (operation) => (outcome += +operation.amount)
+    );
+
+    let exchangeRate = 1;
+    if (account.currency != business.currency) {
+      // const response = await axios.get(
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
+      // );
+      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
     }
-    if (transaction.type === constants.OPERATION_OUTCOME) {
-      factOutcome = factOutcome + +transaction.amount;
-    }
-  });
-  this.factIncome = factIncome;
-  this.factOutcome = factOutcome;
+
+    transactions.totalIncome += exchangeRate * income;
+    transactions.totalOutcome += exchangeRate * outcome;
+  }
+  this.factIncome = transactions.totalIncome;
+  this.factOutcome = transactions.totalOutcome;
   await this.save();
 };
 

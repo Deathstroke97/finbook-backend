@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const Business = mongoose.model("Business");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const axios = require("axios");
@@ -26,7 +25,7 @@ const contractorSchema = new Schema(
       ref: "Business",
       required: true,
     },
-    contactPerson: String,
+    contactName: String,
     phoneNumber: String,
     email: String,
     description: String,
@@ -199,6 +198,7 @@ contractorSchema.statics.getOverallNumbers = async function (
   endTime
 ) {
   const Account = mongoose.model("Account");
+  const Business = mongoose.model("Business");
 
   let transactionDates = {};
   if (startTime && endTime) {
@@ -283,10 +283,10 @@ contractorSchema.statics.getOverallNumbers = async function (
 
     let exchangeRate = 1;
     if (account.currency != business.currency) {
-      const response = await axios.get(
-        `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
-      );
-      exchangeRate = response.data[`${account.currency}_${business.currency}`];
+      // const response = await axios.get(
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
+      // );
+      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
     }
 
     result.totalIncome += exchangeRate * income;
@@ -301,6 +301,7 @@ contractorSchema.statics.getBalance = async function (
   contractorId
 ) {
   const Account = mongoose.model("Account");
+  const Business = mongoose.model("Business");
   const aggResult = await Account.aggregate([
     {
       $match: {
@@ -373,10 +374,10 @@ contractorSchema.statics.getBalance = async function (
 
     let exchangeRate = 1;
     if (account.currency != business.currency) {
-      const response = await axios.get(
-        `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
-      );
-      exchangeRate = response.data[`${account.currency}_${business.currency}`];
+      // const response = await axios.get(
+      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
+      // );
+      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
     }
 
     transactions.totalIncome += exchangeRate * income;
