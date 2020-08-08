@@ -79,37 +79,10 @@ exports.getTransactions = async (req, res, next) => {
 exports.createTransaction = async (req, res, next) => {
   const { body } = req;
   const businessId = req.businessId;
-  const { date, type, amount, account } = req.body;
-
+  const transactionDate = moment(body.date).format("YYYY-MM-DD");
+  const currentDate = moment().format("YYYY-MM-DD");
   try {
-    const acc = await Account.findById(account);
-    let amountLast = +acc.balance;
-    let accountBalance = +acc.balance;
-
-    const startTransaction = await Transaction.find({
-      business: businessId,
-      account: account,
-      date: { $lte: date },
-    })
-      .sort({ date: -1, createdAt: -1 })
-      .limit(1);
-
-    if (startTransaction.length > 0) {
-      amountLast = parseFloat(startTransaction[0].accountBalance);
-    }
-    if (startTransaction.length === 0) {
-      amountLast = +acc.initialBalance;
-      accountBalance = +acc.initialBalance;
-    }
-    if (type === constants.OPERATION_INCOME) {
-      accountBalance = amountLast + +amount;
-    }
-    if (type === constants.OPERATION_OUTCOME) {
-      accountBalance = amountLast - +amount;
-    }
-
-    const isPlanned =
-      moment(date).format("YYYY-MM-DD") > moment().format("YYYY-MM-DD");
+    const isPlanned = transactionDate > currentDate;
     const transaction = new Transaction({
       business: businessId,
       date: body.date,
@@ -123,44 +96,29 @@ exports.createTransaction = async (req, res, next) => {
       description: body.description ? body.description : null,
       relatedDate: body.relatedDate ? body.relatedDate : body.date,
       isObligation: body.isObligation,
-      accountBalance: accountBalance,
       isPeriodic: body.isPeriodic,
       period: body.period && body.period,
       repetitionEndDate: body.repetitionEndDate && body.repetitionEndDate,
     });
 
     await transaction.save();
-    // await transaction.updateTransactionsBalanceOnCreate();
-
-    if (!isPlanned) {
-      if (type === constants.OPERATION_INCOME) {
-        acc.balance = +acc.balance + +amount;
-      }
-      if (type === constants.OPERATION_OUTCOME) {
-        acc.balance = +acc.balance - amount;
-      }
-      await acc.save();
-      if (body.isObligation) {
-        await transaction.attachObligation();
-      }
-    }
+    await transaction.updateTransactionsBalanceOnCreate();
 
     if (body.isPeriodic && body.period && body.repetitionEndDate) {
       transaction.rootOfPeriodicChain = true;
       transaction.periodicChainId = transaction._id;
       await transaction.save();
-      await transaction.addPeriodicChain(acc._id);
+      await transaction.addPeriodicChain(transaction.account);
+      const range = await transaction.getRangeInAsc(
+        body.date,
+        body.repetitionEndDate
+      );
+      // we should not limit upperbound
+      await Transaction.updateBalanceInRange(range);
     }
-    const range = await transaction.getRangeInAsc(
-      body.date,
-      body.repetitionEndDate ? body.repetitionEndDate : null
-    );
-
-    await Transaction.updateBalanceInRange(range);
 
     res.status(201).json({
       message: "Transaction created!",
-      transaction: transformToString([transaction], constants.TRANSACTION),
     });
   } catch (error) {
     if (!error.statusCode) {

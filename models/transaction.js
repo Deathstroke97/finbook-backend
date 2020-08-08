@@ -76,7 +76,7 @@ const transactionSchema = new Schema(
     obligationId: Schema.Types.ObjectId,
     accountBalance: {
       type: Schema.Types.Decimal128,
-      required: true,
+      default: 0,
     },
   },
   { timestamps: true }
@@ -203,89 +203,79 @@ transactionSchema.statics.amountToString = function (transactions) {
   return transactions;
 };
 
-// transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () {
-//   try {
-//     const Transaction = mongoose.model("Transaction", transactionSchema);
-//     const transactions = await Transaction.find({
-//       business: this.business,
-//       account: this.account,
-//       date: { $gte: this.date },
-//       createdAt: { $lt: this.createdAt },
-//     });
-//     let promises = [];
-//     if (transactions.length > 0) {
-//       if (this.type === constants.OPERATION_INCOME) {
-//         promises = transactions.map(async (operation) => {
-//           operation.accountBalance = +operation.accountBalance + +this.amount;
-//           return operation.save();
-//         });
-//       } else {
-//         promises = transactions.map(async (operation) => {
-//           operation.accountBalance = +operation.accountBalance - this.amount;
-//           return operation.save();
-//         });
-//       }
-//       return Promise.all(promises);
-//     }
-//   } catch (error) {
-//     if (!error.statusCode) {
-//       error.statusCode = 500;
-//       error.message = "Failed to update transactions's balance.";
-//     }
-//     throw error;
-//   }
-// };
-
-transactionSchema.methods.updateTransactionsBalance = async function (
-  diff,
-  account
-) {
+transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () {
   try {
-    const Transaction = mongoose.model("Transaction", transactionSchema);
+    const Account = mongoose.model("Account");
+    const account = await Account.findById(this.account);
 
-    const filter = {
+    let amountLast = +account.balance;
+    let accountBalance = +account.balance;
+
+    if (!this.isPlanned) {
+      if (this.type === constants.OPERATION_INCOME) {
+        account.balance = +account.balance + +this.amount;
+      }
+      if (this.type === constants.OPERATION_OUTCOME) {
+        account.balance = +account.balance - this.amount;
+      }
+      await account.save();
+      if (this.isObligation) {
+        await this.attachObligation();
+      }
+    }
+
+    const startTransaction = await Transaction.find({
       business: this.business,
-      account: account._id,
-    };
+      account: this.account,
+      date: { $lte: this.date },
+      createdAt: { $lt: this.createdAt },
+    })
+      .sort({ date: -1, createdAt: -1 })
+      .limit(1);
+
+    if (startTransaction.length > 0) {
+      amountLast = parseFloat(startTransaction[0].accountBalance);
+    }
+    if (startTransaction.length === 0) {
+      amountLast = +account.initialBalance;
+      accountBalance = +account.initialBalance;
+    }
+    if (this.type === constants.OPERATION_INCOME) {
+      accountBalance = amountLast + +this.amount;
+    }
+    if (this.type === constants.OPERATION_OUTCOME) {
+      accountBalance = amountLast - this.amount;
+    }
+    this.accountBalance = accountBalance;
+
+    await this.save();
+
     const transactions = await Transaction.find({
-      $or: [
-        {
-          ...filter,
-          date: { $eq: this.date },
-          // createdAt: { $lt: this.createdAt },
-          createdAt: { $gte: this.createdAt },
-        },
-        {
-          ...filter,
-          date: { $gt: this.date },
-        },
-      ],
+      business: this.business,
+      account: this.account,
+      date: { $gt: this.date },
+      createdAt: { $lt: this.createdAt },
     });
 
     let promises = [];
-
-    if (this.type === constants.OPERATION_INCOME) {
-      promises = transactions.map(async (transaction) => {
-        transaction.accountBalance = +transaction.accountBalance + diff;
-        if (!transaction.isPlanned) {
-          account.balance = transaction.accountBalance;
-        }
-        return transaction.save();
-      });
-    } else {
-      promises = transactions.map(async (transaction) => {
-        transaction.accountBalance = +transaction.accountBalance - diff;
-        if (!transaction.isPlanned) {
-          account.balance = transaction.accountBalance;
-        }
-        return transaction.save();
-      });
+    if (transactions.length > 0) {
+      if (this.type === constants.OPERATION_INCOME) {
+        promises = transactions.map(async (operation) => {
+          operation.accountBalance = +operation.accountBalance + +this.amount;
+          return operation.save();
+        });
+      } else {
+        promises = transactions.map(async (operation) => {
+          operation.accountBalance = +operation.accountBalance - this.amount;
+          return operation.save();
+        });
+      }
+      return Promise.all(promises);
     }
-    await account.save();
-    return Promise.all(promises);
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
+      error.message = error.message;
     }
     throw error;
   }
@@ -331,24 +321,42 @@ transactionSchema.methods.updateAccount = async function (account) {
 
 transactionSchema.methods.updateAmount = async function (amount) {
   const Account = mongoose.model("Account");
-  if (this.isObligation && !this.isPlanned) {
-    const obligation = await Obligation.findById(this.obligationId);
-    obligation.amount = amount;
-    await obligation.save();
-    const contractor = await Contractor.findById(this.contractor);
+  const account = await Account.findById(this.account);
+  const diff = +amount - this.amount;
+
+  if (this.type === constants.OPERATION_INCOME) {
+    this.accountBalance = +this.accountBalance + +diff;
+  }
+  if (this.type === constants.OPERATION_OUTCOME) {
+    this.accountBalance = +this.accountBalance - diff;
+  }
+
+  if (!this.isPlanned) {
     if (this.type === constants.OPERATION_INCOME) {
-      contractor.balance = +contractor.balance + +this.amount - amount;
+      account.balance = +account.balance + +diff;
     }
     if (this.type === constants.OPERATION_OUTCOME) {
-      contractor.balance = +contractor.balance - this.amount + +amount;
+      account.balance = +account.balance - diff;
     }
-    await contractor.save();
+    await account.save();
+    if (this.isObligation) {
+      const obligation = await Obligation.findById(this.obligationId);
+      obligation.amount = amount;
+      await obligation.save();
+      const contractor = await Contractor.findById(this.contractor);
+      if (this.type === constants.OPERATION_INCOME) {
+        contractor.balance = +contractor.balance + +this.amount - amount;
+      }
+      if (this.type === constants.OPERATION_OUTCOME) {
+        contractor.balance = +contractor.balance - this.amount + +amount;
+      }
+      await contractor.save();
+    }
   }
-  const diff = +amount - this.amount;
-  // this.date = date;
+
   this.amount = amount;
+
   // await this.save();
-  const account = await Account.findById(this.account);
   await this.updateTransactionsBalance(diff, account);
 };
 
@@ -369,18 +377,12 @@ transactionSchema.methods.getRangeInAsc = async function (
       .limit(1);
 
     if (startTransaction.length === 0) {
-      let dateQuery = {};
-      if (upperBound) {
-        dateQuery = {
-          date: {
-            $lte: upperBound,
-          },
-        };
-      }
       const range = await Transaction.find({
         business: this.business,
         account: this.account,
-        ...dateQuery,
+        date: {
+          $lte: upperBound,
+        },
       }).sort({ date: 1, createdAt: 1 });
 
       const account = await Account.findById(this.account);
@@ -391,36 +393,29 @@ transactionSchema.methods.getRangeInAsc = async function (
           +account.initialBalance + +firstTransaction.amount;
       } else {
         firstTransaction.accountBalance =
-          account.initialBalance - +firstTransaction.amount;
+          +account.initialBalance - +firstTransaction.amount;
       }
       await firstTransaction.save();
       return range;
     }
 
-    let dateQuery = {};
-    if (upperBound) {
-      dateQuery = {
-        $or: [
-          {
-            date: {
-              $eq: lowerBound,
-            },
-            createdAt: { $lt: this.createdAt },
-          },
-          {
-            date: {
-              $gt: lowerBound,
-              $lte: upperBound,
-            },
-          },
-        ],
-      };
-    }
-
     const range = await Transaction.find({
       business: this.business,
       account: this.account,
-      ...dateQuery,
+      $or: [
+        {
+          date: {
+            $eq: lowerBound,
+          },
+          createdAt: { $lt: this.createdAt },
+        },
+        {
+          date: {
+            $gt: lowerBound,
+            $lte: upperBound,
+          },
+        },
+      ],
     }).sort({ date: 1, createdAt: 1 });
 
     return range;
@@ -576,6 +571,53 @@ transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
   }
 };
 
+transactionSchema.methods.updateTransactionsBalance = async function (
+  diff,
+  account
+) {
+  try {
+    const Transaction = mongoose.model("Transaction", transactionSchema);
+
+    const filter = {
+      business: this.business,
+      account: account._id,
+    };
+    const transactions = await Transaction.find({
+      $or: [
+        {
+          ...filter,
+          date: { $eq: this.date },
+          createdAt: { $gt: this.createdAt },
+        },
+        {
+          ...filter,
+          date: { $gt: this.date },
+        },
+      ],
+    });
+
+    let promises = [];
+
+    if (this.type === constants.OPERATION_INCOME) {
+      promises = transactions.map(async (transaction) => {
+        transaction.accountBalance = +transaction.accountBalance + diff;
+        return transaction.save();
+      });
+    } else {
+      promises = transactions.map(async (transaction) => {
+        transaction.accountBalance = +transaction.accountBalance - diff;
+        return transaction.save();
+      });
+    }
+    return Promise.all(promises);
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    throw error;
+  }
+};
+
 transactionSchema.methods.delete = async function () {
   const Account = mongoose.model("Account");
   const account = await Account.findById(this.account);
@@ -610,7 +652,6 @@ transactionSchema.methods.delete = async function () {
     if (this.type === constants.OPERATION_OUTCOME) {
       account.balance = +account.balance + +this.amount;
     }
-
     await account.save();
   }
   const diff = 0 - this.amount;
