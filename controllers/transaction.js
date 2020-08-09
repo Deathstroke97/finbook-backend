@@ -109,12 +109,9 @@ exports.createTransaction = async (req, res, next) => {
       transaction.periodicChainId = transaction._id;
       await transaction.save();
       await transaction.addPeriodicChain(transaction.account);
-      const range = await transaction.getRangeInAsc(
-        body.date,
-        body.repetitionEndDate
-      );
-      // we should not limit upperbound
-      await Transaction.updateBalanceInRange(range);
+
+      const range = await transaction.getRangeInAscLowerBound(body.date);
+      await transaction.updateBalanceInRange(range, this.accountBalance);
     }
 
     res.status(201).json({
