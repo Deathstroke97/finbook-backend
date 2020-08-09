@@ -364,19 +364,11 @@ transactionSchema.methods.getRangeInAsc = async function (
     const Transaction = mongoose.model("Transaction", transactionSchema);
     const Account = mongoose.model("Account");
 
-    const startTransaction = await Transaction.find(
-      {
-        business: this.business,
-        account: this.account,
-        date: { $lte: lowerBound },
-      },
-      {
-        $or: [
-          { date: { $eq: lowerBound }, createdAt: { $lt: this.createdAt } },
-          { date: { $lt: lowerBound } },
-        ],
-      }
-    )
+    const startTransaction = await Transaction.find({
+      business: this.business,
+      account: this.account,
+      date: { $lte: lowerBound },
+    })
       .sort({ date: -1, createdAt: -1 })
       .limit(1);
 
@@ -402,22 +394,12 @@ transactionSchema.methods.getRangeInAsc = async function (
       const range = await Transaction.find({
         business: this.business,
         account: this.account,
-        $or: [
-          {
-            date: {
-              $eq: lowerBound,
-            },
-            createdAt: { $lt: this.createdAt },
-          },
-          {
-            date: {
-              $gt: lowerBound,
-              $lte: upperBound,
-            },
-          },
-        ],
+        date: { $gt: startTransaction[0].date },
       }).sort({ date: 1, createdAt: 1 });
-      await this.updateBalanceInRange(range, range[0].accountBalance);
+      await this.updateBalanceInRange(
+        range,
+        startTransaction[0].accountBalance
+      );
     }
   } catch (error) {
     if (!error.statusCode) {
@@ -573,7 +555,7 @@ transactionSchema.methods.updatePeriod = async function (period) {
   this.period = period;
   await this.addPeriodicChain(this.account);
   const range = await this.getRangeInAscLowerBound(this.date);
-  await this.updateBalanceInRange(range);
+  await this.updateBalanceInRange(range, this.accountBalance);
 };
 
 transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
@@ -585,7 +567,7 @@ transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
     await this.save();
     await this.addPeriodicChain(this.account);
     const range = await this.getRangeInAscLowerBound(this.date);
-    await this.updateBalanceInRange(range);
+    await this.updateBalanceInRange(range, this.accountBalance);
   }
   if (!isPeriodic && this.isPeriodic) {
     this.isPeriodic = false;
