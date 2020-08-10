@@ -111,7 +111,7 @@ exports.createTransaction = async (req, res, next) => {
       await transaction.addPeriodicChain(transaction.account);
 
       const range = await transaction.getRangeInAscLowerBound(body.date);
-      await transaction.updateBalanceInRange(range, this.accountBalance);
+      await transaction.updateBalanceInRange(range);
     }
 
     res.status(201).json({

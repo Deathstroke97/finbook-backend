@@ -229,16 +229,18 @@ transactionSchema.methods.updateTransactionsBalanceOnCreate = async function () 
       account: this.account,
       date: { $lte: this.date },
       createdAt: { $lt: this.createdAt },
+      //createdAt нужен так как запись уже в базе, нельзя чтобы он был startTransaction
     })
       .sort({ date: -1, createdAt: -1 })
       .limit(1);
 
-    if (startTransaction.length > 0) {
-      amountLast = parseFloat(startTransaction[0].accountBalance);
-    }
     if (startTransaction.length === 0) {
       amountLast = +account.initialBalance;
       accountBalance = +account.initialBalance;
+    }
+
+    if (startTransaction.length > 0) {
+      amountLast = parseFloat(startTransaction[0].accountBalance);
     }
     if (this.type === constants.OPERATION_INCOME) {
       accountBalance = amountLast + +this.amount;
@@ -356,6 +358,57 @@ transactionSchema.methods.updateAmount = async function (amount) {
   await this.updateTransactionsBalance(diff, account);
 };
 
+// transactionSchema.methods.getRangeInAsc = async function (
+//   lowerBound,
+//   upperBound
+// ) {
+//   try {
+//     const Transaction = mongoose.model("Transaction", transactionSchema);
+//     const Account = mongoose.model("Account");
+
+//     const startTransaction = await Transaction.find({
+//       business: this.business,
+//       account: this.account,
+//       date: { $lte: lowerBound },
+//       createdAt: { $lt: this.createdAt },
+//     })
+//       .sort({ date: -1, createdAt: -1 })
+//       .limit(1);
+
+//     if (startTransaction.length === 0) {
+//       console.log("не нашел потому что cоздан раньше");
+//       const range = await Transaction.find({
+//         business: this.business,
+//         account: this.account,
+//         date: {
+//           $lte: upperBound,
+//         },
+//       }).sort({ date: 1, createdAt: 1 });
+
+//       const account = await Account.findById(this.account);
+//       await this.updateBalanceInRange(range, account.initialBalance);
+//     } else {
+//       console.log("that is what happened");
+//       const range = await Transaction.find({
+//         business: this.business,
+//         account: this.account,
+//         date: { $gte: startTransaction[0].date },
+//         createdAt: { $gt: startTransaction[0].createdAt },
+//       }).sort({ date: 1, createdAt: 1 });
+//       await this.updateBalanceInRange(
+//         range,
+//         startTransaction[0].accountBalance
+//       );
+//     }
+//   } catch (error) {
+//     if (!error.statusCode) {
+//       error.statusCode = 500;
+//       error.message = error.message;
+//     }
+//     throw error;
+//   }
+// };
+
 transactionSchema.methods.getRangeInAsc = async function (
   lowerBound,
   upperBound
@@ -367,7 +420,7 @@ transactionSchema.methods.getRangeInAsc = async function (
     const startTransaction = await Transaction.find({
       business: this.business,
       account: this.account,
-      date: { $lte: lowerBound },
+      date: { $lt: lowerBound },
     })
       .sort({ date: -1, createdAt: -1 })
       .limit(1);
@@ -380,26 +433,22 @@ transactionSchema.methods.getRangeInAsc = async function (
           $lte: upperBound,
         },
       }).sort({ date: 1, createdAt: 1 });
-
-      const account = await Account.findById(this.account);
-      if (this.type === constants.OPERATION_INCOME) {
-        this.accountBalance = +account.initialBalance + +this.amount;
+      const account = await Account.findById(range[0].account);
+      if (range[0].type === constants.OPERATION_INCOME) {
+        range[0].accountBalance = +account.initialBalance + range[0].amount;
       }
-      if (this.type === constants.OPERATION_OUTCOME) {
-        this.accountBalance = +account.initialBalance - this.amount;
+      if (range[0].type === constants.OPERATION_OUTCOME) {
+        range[0].accountBalance = +account.initialBalance - range[0].amount;
       }
-      await this.save();
-      await this.updateBalanceInRange(range, this.accountBalance);
+      await range[0].save();
+      await this.updateBalanceInRange(range);
     } else {
       const range = await Transaction.find({
         business: this.business,
         account: this.account,
-        date: { $gt: startTransaction[0].date },
+        date: { $gte: startTransaction[0].date },
       }).sort({ date: 1, createdAt: 1 });
-      await this.updateBalanceInRange(
-        range,
-        startTransaction[0].accountBalance
-      );
+      await this.updateBalanceInRange(range);
     }
   } catch (error) {
     if (!error.statusCode) {
@@ -414,24 +463,13 @@ transactionSchema.methods.getRangeInAscLowerBound = async function (
   lowerBound
 ) {
   try {
-    const range = await Transaction.find(
-      { business: this.business, account: this.account },
-      {
-        $or: [
-          {
-            date: {
-              $eq: lowerBound,
-            },
-            createdAt: { $gt: this.createdAt },
-          },
-          {
-            date: {
-              $gt: lowerBound,
-            },
-          },
-        ],
-      }
-    ).sort({ date: 1, createdAt: 1 });
+    const range = await Transaction.find({
+      business: this.business,
+      account: this.account,
+      date: {
+        $gte: lowerBound,
+      },
+    }).sort({ date: 1, createdAt: 1 });
     return range;
   } catch (error) {
     if (!error.statusCode) {
@@ -442,13 +480,11 @@ transactionSchema.methods.getRangeInAscLowerBound = async function (
   }
 };
 
-transactionSchema.methods.updateBalanceInRange = async function (
-  range,
-  balance
-) {
+transactionSchema.methods.updateBalanceInRange = async function (range) {
   try {
-    let startBalance = +balance;
     if (range.length > 0) {
+      let startBalance = range[0].accountBalance;
+      range = range.slice(1);
       const promises = range.map(async (operation) => {
         if (operation.type == constants.OPERATION_INCOME) {
           operation.accountBalance = +startBalance + +operation.amount;
@@ -509,6 +545,8 @@ transactionSchema.methods.updateDate = async function (date) {
     lowerBound = date;
     upperBound = this.date;
   }
+  console.log("lowerBound: ", lowerBound);
+  console.log("upperBound: ", upperBound);
   if (this.isPeriodic) {
     upperBound = this.repetitionEndDate;
   }
@@ -555,7 +593,7 @@ transactionSchema.methods.updatePeriod = async function (period) {
   this.period = period;
   await this.addPeriodicChain(this.account);
   const range = await this.getRangeInAscLowerBound(this.date);
-  await this.updateBalanceInRange(range, this.accountBalance);
+  await this.updateBalanceInRange(range);
 };
 
 transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
@@ -567,7 +605,7 @@ transactionSchema.methods.updateIsPeriodic = async function (isPeriodic) {
     await this.save();
     await this.addPeriodicChain(this.account);
     const range = await this.getRangeInAscLowerBound(this.date);
-    await this.updateBalanceInRange(range, this.accountBalance);
+    await this.updateBalanceInRange(range);
   }
   if (!isPeriodic && this.isPeriodic) {
     this.isPeriodic = false;
