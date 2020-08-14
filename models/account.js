@@ -141,12 +141,13 @@ accountSchema.statics.getMoneyInTheEnd = async function (
   }
 };
 
-accountSchema.statics.generateCashFlowByAccounts = async function ({
+accountSchema.statics.generateCashFlowByAccounts = async function (
   businessId,
-  countPlanned,
   queryData,
-}) {
+  countPlanned
+) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
+  console.log("queryData: ", queryData);
 
   const aggResult = await Account.aggregate([
     {

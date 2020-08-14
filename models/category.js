@@ -245,12 +245,12 @@ categorySchema.statics.generateCashFlowByActivity = async function (
   return activities;
 };
 
-categorySchema.statics.generateProfitAndLossByCategory = async function ({
+categorySchema.statics.generateProfitAndLossByCategory = async function (
   businessId,
   queryData,
   countPlanned,
-  method,
-}) {
+  method
+) {
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
   const Transaction = require("./transaction");
 

@@ -18,7 +18,7 @@ exports.getAccounts = async (req, res, next) => {
 };
 
 exports.createAccount = async (req, res, next) => {
-  const businessId = req.body.businessId;
+  const businessId = req.businessId;
   const {
     name,
     currency,

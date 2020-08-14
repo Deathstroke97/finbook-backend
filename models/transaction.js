@@ -358,57 +358,6 @@ transactionSchema.methods.updateAmount = async function (amount) {
   await this.updateTransactionsBalance(diff, account);
 };
 
-// transactionSchema.methods.getRangeInAsc = async function (
-//   lowerBound,
-//   upperBound
-// ) {
-//   try {
-//     const Transaction = mongoose.model("Transaction", transactionSchema);
-//     const Account = mongoose.model("Account");
-
-//     const startTransaction = await Transaction.find({
-//       business: this.business,
-//       account: this.account,
-//       date: { $lte: lowerBound },
-//       createdAt: { $lt: this.createdAt },
-//     })
-//       .sort({ date: -1, createdAt: -1 })
-//       .limit(1);
-
-//     if (startTransaction.length === 0) {
-//       console.log("не нашел потому что cоздан раньше");
-//       const range = await Transaction.find({
-//         business: this.business,
-//         account: this.account,
-//         date: {
-//           $lte: upperBound,
-//         },
-//       }).sort({ date: 1, createdAt: 1 });
-
-//       const account = await Account.findById(this.account);
-//       await this.updateBalanceInRange(range, account.initialBalance);
-//     } else {
-//       console.log("that is what happened");
-//       const range = await Transaction.find({
-//         business: this.business,
-//         account: this.account,
-//         date: { $gte: startTransaction[0].date },
-//         createdAt: { $gt: startTransaction[0].createdAt },
-//       }).sort({ date: 1, createdAt: 1 });
-//       await this.updateBalanceInRange(
-//         range,
-//         startTransaction[0].accountBalance
-//       );
-//     }
-//   } catch (error) {
-//     if (!error.statusCode) {
-//       error.statusCode = 500;
-//       error.message = error.message;
-//     }
-//     throw error;
-//   }
-// };
-
 transactionSchema.methods.getRangeInAsc = async function (
   lowerBound,
   upperBound
@@ -513,15 +462,16 @@ transactionSchema.methods.updateDate = async function (date) {
   let lowerBound, upperBound;
 
   if (moment(date) > moment()) {
-    this.isPlanned = true;
-    const account = await Account.findById(this.account);
-    if (this.type === constants.OPERATION_INCOME) {
-      account.balance = +account.balance - this.amount;
+    if (!this.isPlanned) {
+      const account = await Account.findById(this.account);
+      if (this.type === constants.OPERATION_INCOME) {
+        account.balance = +account.balance - this.amount;
+      }
+      if (this.type === constants.OPERATION_OUTCOME) {
+        account.balance = +account.balance + +this.amount;
+      }
+      await account.save();
     }
-    if (this.type === constants.OPERATION_OUTCOME) {
-      account.balance = +account.balance + +this.amount;
-    }
-    await account.save();
   }
 
   if (moment(date) < moment()) {

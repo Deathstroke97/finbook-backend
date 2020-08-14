@@ -14,6 +14,7 @@ const {
 exports.getCashFlowReport = async (req, res, next) => {
   const businessId = req.businessId;
   const { queryData, reportBy, countPlanned } = req.body;
+  console.log("req.body: ", req.body);
   let result = null;
   try {
     switch (reportBy) {
@@ -32,13 +33,25 @@ exports.getCashFlowReport = async (req, res, next) => {
         );
         break;
       case ACCOUNT:
-        result = await Account.generateCashFlowByAccounts(req.body);
+        result = await Account.generateCashFlowByAccounts(
+          businessId,
+          queryData,
+          countPlanned
+        );
         break;
       case CONTRACTOR:
-        result = await Contractor.generateCashFlowByContractor(req.body);
+        result = await Contractor.generateCashFlowByContractor(
+          businessId,
+          queryData,
+          countPlanned
+        );
         break;
       case PROJECT:
-        result = await Project.generateCashFlowByProject(req.body);
+        result = await Project.generateCashFlowByProject(
+          businessId,
+          queryData,
+          countPlanned
+        );
         break;
     }
     res.status(200).json({
@@ -53,16 +66,27 @@ exports.getCashFlowReport = async (req, res, next) => {
 };
 
 exports.getProfitAndLossReport = async (req, res, next) => {
-  const { businessId, queryData, reportBy, method } = req.body;
+  const businessId = req.businessId;
+  const { reportBy, queryData, countPlanned, method } = req.body;
   let result = null;
 
   try {
     switch (reportBy) {
       case CATEGORY:
-        result = await Category.generateProfitAndLossByCategory(req.body);
+        result = await Category.generateProfitAndLossByCategory(
+          businessId,
+          queryData,
+          countPlanned,
+          method
+        );
         break;
       case PROJECT:
-        result = await Project.generateProfitAndLossByProject(req.body);
+        result = await Project.generateProfitAndLossByProject(
+          businessId,
+          queryData,
+          countPlanned,
+          method
+        );
         break;
     }
     res.status(200).json({

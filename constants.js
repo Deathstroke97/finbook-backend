@@ -7,6 +7,7 @@ module.exports = Object.freeze({
   OPERATION_OUTCOME: "outcome",
 
   COMPLETED: "completed",
+  UNCOMPLETED: "uncompleted",
   PLANNED: "planned",
   ALL: "all",
 

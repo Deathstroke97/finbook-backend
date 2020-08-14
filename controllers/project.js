@@ -9,7 +9,7 @@ exports.getProjects = async (req, res, next) => {
   const { type, name, page, rowsPerPage } = req.body;
   let query = {};
   query.business = businessId;
-  if (type === constants.COMPLETED) query.isFinished = true;
+  if (type === constants.UNCOMPLETED) query.isFinished = false;
   if (name) query.name = new RegExp("^" + name, "i");
   // if (name) query.name = { $regex: name, $options: "i" };
 

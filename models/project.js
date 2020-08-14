@@ -61,11 +61,11 @@ const projectSchema = new Schema(
   { timestamps: true }
 );
 
-projectSchema.statics.generateCashFlowByProject = async function ({
+projectSchema.statics.generateCashFlowByProject = async function (
   businessId,
-  countPlanned,
   queryData,
-}) {
+  countPlanned
+) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
 
   const aggResult = await Project.aggregate([
@@ -207,12 +207,12 @@ projectSchema.statics.generateCashFlowByProject = async function ({
   return mainReport;
 };
 
-projectSchema.statics.generateProfitAndLossByProject = async function ({
+projectSchema.statics.generateProfitAndLossByProject = async function (
   businessId,
   queryData,
   countPlanned,
-  method,
-}) {
+  method
+) {
   const filterPlanned = countPlanned ? {} : { isPlanned: false };
   const Transaction = require("./transaction");
 

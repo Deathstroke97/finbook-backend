@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const axios = require("axios");
-const Account = require("./account");
 const moment = require("moment");
 const Obligation = require("./obligation");
 
@@ -37,12 +36,13 @@ const contractorSchema = new Schema(
   { timestamps: true }
 );
 
-contractorSchema.statics.generateCashFlowByContractor = async function ({
+contractorSchema.statics.generateCashFlowByContractor = async function (
   businessId,
-  countPlanned,
   queryData,
-}) {
+  countPlanned
+) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
+  const Account = mongoose.model("Account");
 
   const aggResult = await Contractor.aggregate([
     {

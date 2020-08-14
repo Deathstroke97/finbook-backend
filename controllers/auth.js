@@ -79,9 +79,11 @@ exports.login = async (req, res, next) => {
       token: token,
       userId: loadedUser._id.toString(),
       name: user.name,
-      businessId: user.business,
+      business: business,
+      // businessId: user.business,
       businessName: user.businessName,
       businessCurrency: business.currency,
+      businessCreationDate: business.createdAt,
     });
   } catch (err) {
     if (!err.statusCode) {
