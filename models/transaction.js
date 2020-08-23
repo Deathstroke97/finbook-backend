@@ -495,8 +495,7 @@ transactionSchema.methods.updateDate = async function (date) {
     lowerBound = date;
     upperBound = this.date;
   }
-  console.log("lowerBound: ", lowerBound);
-  console.log("upperBound: ", upperBound);
+
   if (this.isPeriodic) {
     upperBound = this.repetitionEndDate;
   }

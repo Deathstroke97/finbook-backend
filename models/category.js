@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const Account = require("./account");
+const Business = require("./business");
 const ObjectId = mongoose.Types.ObjectId;
 
 const {
@@ -19,6 +20,7 @@ const {
   filterEmptyCategoriesCashFlow,
   filterEmptyCategoriesProfitAndLoss,
   populateTransactions,
+  getConversionRates,
 } = require("../utils/functions");
 
 const categorySchema = new Schema({
@@ -119,13 +121,31 @@ categorySchema.statics.generateCashFlowByCategory = async function (
     queryData
   );
   aggResult.push(emptyCategories);
-  await populateTransactions(aggResult);
+  //если при нажатии статьи захотим модалку с операциями то надо использовать код ниже
+  //но в constructReportByCategory сломается operation.account
+  // await populateTransactions(aggResult);
 
+  console.log("queryData: ", queryData);
   const report = getSkeletonForCategoryReport(queryData);
-  constructReportByCategory(aggResult, report, queryData);
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
+
+  constructReportByCategory(aggResult, report, conversionRates, queryData);
+
+  await Account.getMoneyInTheBeginning(
+    businessId,
+    countPlanned,
+    report,
+    conversionRates
+  );
+  await Account.getMoneyInTheEnd(
+    businessId,
+    countPlanned,
+    report,
+    conversionRates
+  );
 
   calculateBalance(report);
 
@@ -175,6 +195,7 @@ categorySchema.statics.generateCashFlowByActivity = async function (
         kind: { $first: "$kind" },
         type: { $first: "$type" },
         name: { $first: "$name" },
+
         operations: { $push: "$transactions" },
       },
     },
@@ -207,23 +228,30 @@ categorySchema.statics.generateCashFlowByActivity = async function (
     queryData
   );
   aggResult.push(emptyCategories);
-  await populateTransactions(aggResult);
+  // await populateTransactions(aggResult);
+
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
 
   const activities = putCategoriesByActivity(aggResult, queryData);
 
   constructReportByCategory(
     activities.financial.categories,
     activities.financial.report,
+    conversionRates,
     queryData
   );
   constructReportByCategory(
     activities.operational.categories,
     activities.operational.report,
+    conversionRates,
     queryData
   );
   constructReportByCategory(
     activities.investment.categories,
     activities.investment.report,
+    conversionRates,
     queryData
   );
 
@@ -239,8 +267,18 @@ categorySchema.statics.generateCashFlowByActivity = async function (
   delete activities.operational.categories;
   delete activities.investment.categories;
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, activities);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, activities);
+  await Account.getMoneyInTheBeginning(
+    businessId,
+    countPlanned,
+    activities,
+    conversionRates
+  );
+  await Account.getMoneyInTheEnd(
+    businessId,
+    countPlanned,
+    activities,
+    conversionRates
+  );
 
   return activities;
 };
@@ -305,9 +343,14 @@ categorySchema.statics.generateProfitAndLossByCategory = async function (
     select: "name",
   });
 
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
+
   const separateCategoriesReport = await this.constructReportForSeparateCategories(
     queryData,
     countPlanned,
+    conversionRates,
     method
   );
 
@@ -315,7 +358,13 @@ categorySchema.statics.generateProfitAndLossByCategory = async function (
 
   const report = getSkeletonForProfitAndLossByCategory(queryData);
 
-  constructProfitAndLossByCategory(aggResult, report, queryData, method);
+  constructProfitAndLossByCategory(
+    aggResult,
+    report,
+    conversionRates,
+    queryData,
+    method
+  );
   filterEmptyCategoriesProfitAndLoss(report);
   calculateOperatingProfit(report);
   report.separateCategoriesReport = separateCategoriesReport;
@@ -325,6 +374,7 @@ categorySchema.statics.generateProfitAndLossByCategory = async function (
 categorySchema.statics.constructReportForSeparateCategories = async (
   queryData,
   countPlanned,
+  conversionRates,
   method
 ) => {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
@@ -392,7 +442,13 @@ categorySchema.statics.constructReportForSeparateCategories = async (
 
   const report = getSkeletonForCategoryReport(queryData);
 
-  constructReportByCategory(seperateCategories, report, queryData, method);
+  constructReportByCategory(
+    seperateCategories,
+    report,
+    conversionRates,
+    queryData,
+    method
+  );
 
   delete report.moneyInTheBeginning;
   delete report.moneyInTheEnd;

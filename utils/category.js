@@ -68,7 +68,13 @@ const putCategoriesByActivity = (aggResult, queryData) => {
   return activities;
 };
 
-const constructReportByCategory = (array, report, queryData, method) => {
+const constructReportByCategory = (
+  array,
+  report,
+  conversionRates,
+  queryData,
+  method
+) => {
   array.forEach((category) => {
     report.incomes.categories.push({
       categoryId: category._id.category,
@@ -95,12 +101,13 @@ const constructReportByCategory = (array, report, queryData, method) => {
       report.incomes.categories[lastIndex].periods.details.forEach(
         (period, index) => {
           if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.incomes.total += +operation.amount;
-            report.incomes.details[index].totalAmount += +operation.amount;
-            report.incomes.categories[
-              lastIndex
-            ].periods.total += +operation.amount;
+            const converted =
+              conversionRates[operation.account] * +operation.amount;
+
+            period.totalAmount += converted;
+            report.incomes.total += converted;
+            report.incomes.details[index].totalAmount += converted;
+            report.incomes.categories[lastIndex].periods.total += converted;
             report.incomes.categories[lastIndex].operations.push(operation);
           }
         }
@@ -128,16 +135,16 @@ const constructReportByCategory = (array, report, queryData, method) => {
       }
 
       const lastIndex = report.outcomes.categories.length - 1;
-
       report.outcomes.categories[lastIndex].periods.details.forEach(
         (period, index) => {
           if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.outcomes.total += +operation.amount;
-            report.outcomes.details[index].totalAmount += +operation.amount;
-            report.outcomes.categories[
-              lastIndex
-            ].periods.total += +operation.amount;
+            const converted =
+              conversionRates[operation.account] * +operation.amount;
+
+            period.totalAmount += converted;
+            report.outcomes.total += converted;
+            report.outcomes.details[index].totalAmount += converted;
+            report.outcomes.categories[lastIndex].periods.total += converted;
             report.outcomes.categories[lastIndex].operations.push(operation);
           }
         }
@@ -241,6 +248,7 @@ const calculateOperatingProfit = (report) => {
 };
 
 const helperProfitAndLossByCategory = (
+  conversionRates,
   array,
   report,
   type,
@@ -273,10 +281,12 @@ const helperProfitAndLossByCategory = (
         report.categories[lastIndex].periods.details.forEach(
           (period, index) => {
             if (period.month == opMonth && period.year == opYear) {
-              period.totalAmount += +operation.amount;
-              report.total += +operation.amount;
-              report.details[index].totalAmount += +operation.amount;
-              report.categories[lastIndex].periods.total += +operation.amount;
+              const converted =
+                conversionRates[operation.account] * +operation.amount;
+              period.totalAmount += converted;
+              report.total += converted;
+              report.details[index].totalAmount += converted;
+              report.categories[lastIndex].periods.total += converted;
             }
           }
         );
@@ -302,10 +312,12 @@ const helperProfitAndLossByCategory = (
         report.categories[lastIndex].periods.details.forEach(
           (period, index) => {
             if (period.month == opMonth && period.year == opYear) {
-              period.totalAmount += +operation.amount;
-              report.total += +operation.amount;
-              report.details[index].totalAmount += +operation.amount;
-              report.categories[lastIndex].periods.total += +operation.amount;
+              const converted =
+                conversionRates[operation.account] * +operation.amount;
+              period.totalAmount += converted;
+              report.total += converted;
+              report.details[index].totalAmount += converted;
+              report.categories[lastIndex].periods.total += converted;
             }
           }
         );
@@ -317,6 +329,7 @@ const helperProfitAndLossByCategory = (
 const constructProfitAndLossByCategory = (
   aggResult,
   report,
+  conversionRates,
   queryData,
   method
 ) => {
@@ -347,6 +360,7 @@ const constructProfitAndLossByCategory = (
   });
 
   helperProfitAndLossByCategory(
+    conversionRates,
     transformed.withProjects,
     report.incomes.withProjects,
     constants.INCOME,
@@ -354,6 +368,7 @@ const constructProfitAndLossByCategory = (
     method
   );
   helperProfitAndLossByCategory(
+    conversionRates,
     transformed.withoutProjects,
     report.incomes.withoutProjects,
     constants.INCOME,
@@ -361,6 +376,7 @@ const constructProfitAndLossByCategory = (
     method
   );
   helperProfitAndLossByCategory(
+    conversionRates,
     transformed.withProjects,
     report.outcomes.withProjects,
     constants.OUTCOME,
@@ -368,6 +384,7 @@ const constructProfitAndLossByCategory = (
     method
   );
   helperProfitAndLossByCategory(
+    conversionRates,
     transformed.withoutProjects,
     report.outcomes.withoutProjects,
     constants.OUTCOME,

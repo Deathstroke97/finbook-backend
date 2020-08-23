@@ -7,11 +7,19 @@ const axios = require("axios");
 const Business = require("./business");
 const { getGrossProfit, getProfitability } = require("../utils/project");
 
-const { populateWithBuckets, calculateBalance } = require("../utils/functions");
+const {
+  populateWithBuckets,
+  calculateBalance,
+  convertToBusinessCurrency,
+  getExchageRate,
+  getConversionRates,
+} = require("../utils/functions");
 const {
   getSkeletonForAccountReport,
   constructReportByAccount,
 } = require("../utils/account");
+
+const { calculateProjectDetails } = require("../utils/project");
 
 const accountSchema = new Schema({
   name: {
@@ -49,7 +57,8 @@ const accountSchema = new Schema({
 accountSchema.statics.getMoneyInTheBeginning = async function (
   businessId,
   countPlanned,
-  report
+  report,
+  conversionRates
 ) {
   const Transaction = require("./transaction");
   const array = report.moneyInTheBeginning.details;
@@ -76,15 +85,21 @@ accountSchema.statics.getMoneyInTheBeginning = async function (
         .limit(1);
       transactions.push(transaction);
     }
+
     Promise.all(transactions).then((transactions) => {
       for (let i = 0; i < transactions.length; i++) {
         const transaction = transactions[i];
+
         if (transaction.length > 0) {
-          accountBalance = parseFloat(transaction[0].accountBalance);
+          accountBalance =
+            parseFloat(transaction[0].accountBalance) *
+            conversionRates[transaction[0].account];
           totalAmount += accountBalance;
         } else {
           if (date >= moment(accounts[i].initialBalanceDate)) {
-            totalAmount += +accounts[i].initialBalance;
+            totalAmount +=
+              +accounts[i].initialBalance *
+              conversionRates[accounts[i].currency];
           }
         }
       }
@@ -96,7 +111,8 @@ accountSchema.statics.getMoneyInTheBeginning = async function (
 accountSchema.statics.getMoneyInTheEnd = async function (
   businessId,
   countPlanned,
-  report
+  report,
+  conversionRates
 ) {
   const Transaction = require("./transaction");
   const array = report.moneyInTheEnd.details;
@@ -126,11 +142,14 @@ accountSchema.statics.getMoneyInTheEnd = async function (
     for (let i = 0; i < transactions.length; i++) {
       const transaction = transactions[i];
       if (transaction.length > 0) {
-        accountBalance = parseFloat(transaction[0].accountBalance);
+        accountBalance =
+          parseFloat(transaction[0].accountBalance) *
+          conversionRates[transaction[0].account];
         totalAmount += accountBalance;
       } else {
         if (date >= moment(accounts[i].initialBalanceDate)) {
-          totalAmount += +accounts[i].initialBalance;
+          totalAmount +=
+            +accounts[i].initialBalance * conversionRates[accounts[i].currency];
         }
       }
     }
@@ -147,7 +166,6 @@ accountSchema.statics.generateCashFlowByAccounts = async function (
   countPlanned
 ) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
-  console.log("queryData: ", queryData);
 
   const aggResult = await Account.aggregate([
     {
@@ -197,12 +215,14 @@ accountSchema.statics.generateCashFlowByAccounts = async function (
     {
       $group: {
         _id: { account: "$name" },
+        currency: { $first: "$currency" },
         total: { $sum: "$transactions.amount" },
         operations: { $push: "$transactions" },
       },
     },
     {
       $project: {
+        currency: 1,
         incomeOperations: {
           $filter: {
             input: "$operations",
@@ -223,10 +243,23 @@ accountSchema.statics.generateCashFlowByAccounts = async function (
 
   const report = getSkeletonForAccountReport(queryData);
 
-  constructReportByAccount(aggResult, report, queryData);
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
+  constructReportByAccount(aggResult, report, queryData, conversionRates);
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
+  await Account.getMoneyInTheBeginning(
+    businessId,
+    countPlanned,
+    report,
+    conversionRates
+  );
+  await Account.getMoneyInTheEnd(
+    businessId,
+    countPlanned,
+    report,
+    conversionRates
+  );
   calculateBalance(report);
 
   return report;
@@ -304,12 +337,14 @@ accountSchema.statics.getOverallNumbers = async function (
       $group: {
         _id: { account: "$name" },
         currency: { $first: "$currency" },
+        balance: { $first: "$balance" },
         operations: { $push: "$transactions" },
       },
     },
     {
       $project: {
         currency: 1,
+        balance: 1,
         incomeOperations: {
           $filter: {
             input: "$operations",
@@ -361,16 +396,7 @@ accountSchema.statics.getOverallNumbers = async function (
     account.outcomeOperations.forEach((operation) => {
       outcome += +operation.amount;
     });
-
-    let exchangeRate = 1;
-    if (account.currency != business.currency) {
-      // const response = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
-      // );
-      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
-      // exchangeRate = 1;
-    }
-
+    const exchangeRate = await getExchageRate(account, business);
     result.totalIncome.fact += exchangeRate * income;
     result.totalOutcome.fact += exchangeRate * outcome;
   }
@@ -378,41 +404,7 @@ accountSchema.statics.getOverallNumbers = async function (
   result.totalBalance.fact = result.totalIncome.fact - result.totalOutcome.fact;
 
   if (project) {
-    result.totalIncome.plan = +project.planIncome;
-    result.totalOutcome.plan = +project.planOutcome;
-    result.totalBalance.plan =
-      result.totalIncome.plan - result.totalOutcome.plan;
-    // сalculating percentage values fact/plan
-    //income
-    if (+project.planIncome !== 0) {
-      const percent = (
-        (result.totalIncome.fact * 100) /
-        result.totalIncome.plan
-      ).toFixed(2);
-      result.totalIncome.percent = percent > 100 ? 100 : +percent;
-    }
-    //outcome
-    if (+project.planOutcome !== 0) {
-      const percent = (
-        (result.totalOutcome.fact * 100) /
-        result.totalOutcome.plan
-      ).toFixed(2);
-      result.totalOutcome.percent = percent > 100 ? 100 : +percent;
-    }
-    //balance
-    if (+project.planIncome - project.planOutcome !== 0) {
-      const difference = +project.planIncome - project.planOutcome;
-      const percent = (result.totalBalance.fact * 100) / difference;
-      result.totalBalance.percent = percent > 100 ? 100 : +percent;
-    }
-    //profitability
-    const grossProfit = getGrossProfit(result);
-    result.profitability = getProfitability(grossProfit, project, result);
-    if (+result.profitability.plan !== 0) {
-      const percent =
-        (result.profitability.fact * 100) / result.profitability.plan;
-      result.profitability.percent = percent > 100 ? 100 : +percent;
-    }
+    calculateProjectDetails(result, project);
   }
   return result;
 };
@@ -426,25 +418,8 @@ accountSchema.statics.getMoneyInBusiness = async function (businessId) {
   const accounts = await Account.find({ business: ObjectId(businessId) });
 
   for (const account of accounts) {
-    let exchangeRate = 1;
-    if (account.currency != business.currency) {
-      // const response = await axios.get(
-      //   // `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
-      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
-      // );
-      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
-      exchangeRate = 1;
-      // const response = await axios.get(
-      //   `https://www.amdoren.com/api/currency.php?api_key=w98H8acteFPKpE8j59udXq4NYxpciN&from=${account.currency}&to=${business.currency}`
-      // );
-      // exchangeRate = response.data.amount;
-      // const response = await axios.get(
-      //   // `https://v6.exchangerate-api.com/v6/4ff75eafe9d880c6bd719af7/latest/${account.currency}`
-      //   `https://v6.exchangerate-api.com/v6/8295c1d86ef8d29305aa6aa2/latest/${account.currency}`
-      // );
-      // exchangeRate = response.data.conversion_rates[business.currency];
-    }
-    moneyInBusiness.total += exchangeRate * account.balance;
+    const converted = await convertToBusinessCurrency(account, business);
+    moneyInBusiness.total += converted;
     moneyInBusiness.accounts.push({
       name: account.name,
       balance: +account.balance,

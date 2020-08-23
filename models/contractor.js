@@ -5,7 +5,11 @@ const axios = require("axios");
 const moment = require("moment");
 const Obligation = require("./obligation");
 
-const { populateWithBuckets, calculateBalance } = require("../utils/functions");
+const {
+  populateWithBuckets,
+  calculateBalance,
+  getConversionRates,
+} = require("../utils/functions");
 const {
   getSkeletonForContractorReport,
   constructReportByContractor,
@@ -43,6 +47,7 @@ contractorSchema.statics.generateCashFlowByContractor = async function (
 ) {
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
   const Account = mongoose.model("Account");
+  const Business = mongoose.model("Business");
 
   const aggResult = await Contractor.aggregate([
     {
@@ -80,7 +85,7 @@ contractorSchema.statics.generateCashFlowByContractor = async function (
         "transactions.business:": 0,
         "transactions.contractor": 0,
         "transactions.project": 0,
-        "transactions.account:": 0,
+
         "transactions.createdAt": 0,
         "transactions.updatedAt:": 0,
         "transactions.accountBalance": 0,
@@ -115,6 +120,7 @@ contractorSchema.statics.generateCashFlowByContractor = async function (
       },
     },
   ]);
+
   const emptyContractors = await getEmptyContractorTransactions(
     businessId,
     countPlanned,
@@ -122,11 +128,25 @@ contractorSchema.statics.generateCashFlowByContractor = async function (
   );
   aggResult.push(emptyContractors);
 
-  const report = getSkeletonForContractorReport(queryData);
-  constructReportByContractor(aggResult, report, queryData);
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, report);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, report);
+  const report = getSkeletonForContractorReport(queryData);
+  constructReportByContractor(aggResult, report, queryData, conversionRates);
+
+  await Account.getMoneyInTheBeginning(
+    businessId,
+    countPlanned,
+    report,
+    conversionRates
+  );
+  await Account.getMoneyInTheEnd(
+    businessId,
+    countPlanned,
+    report,
+    conversionRates
+  );
   calculateBalance(report);
 
   return report;

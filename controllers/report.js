@@ -14,7 +14,7 @@ const {
 exports.getCashFlowReport = async (req, res, next) => {
   const businessId = req.businessId;
   const { queryData, reportBy, countPlanned } = req.body;
-  console.log("req.body: ", req.body);
+
   let result = null;
   try {
     switch (reportBy) {

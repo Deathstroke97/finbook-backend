@@ -26,7 +26,12 @@ exports.getSkeletonForContractorReport = (queryData) => {
   return report;
 };
 
-exports.constructReportByContractor = (aggResult, report, queryData) => {
+exports.constructReportByContractor = (
+  aggResult,
+  report,
+  queryData,
+  conversionRates
+) => {
   aggResult.forEach((contractor) => {
     report.incomes.contractors.push({
       name: contractor._id.contractor,
@@ -42,12 +47,12 @@ exports.constructReportByContractor = (aggResult, report, queryData) => {
       report.incomes.contractors[lastIndex].periods.details.forEach(
         (period, index) => {
           if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.incomes.total += +operation.amount;
-            report.incomes.details[index].totalAmount += +operation.amount;
-            report.incomes.contractors[
-              lastIndex
-            ].periods.total += +operation.amount;
+            const converted =
+              conversionRates[operation.account] * +operation.amount;
+            period.totalAmount += converted;
+            report.incomes.total += converted;
+            report.incomes.details[index].totalAmount += converted;
+            report.incomes.contractors[lastIndex].periods.total += converted;
           }
         }
       );
@@ -66,12 +71,12 @@ exports.constructReportByContractor = (aggResult, report, queryData) => {
       report.outcomes.contractors[lastIndex].periods.details.forEach(
         (period, index) => {
           if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.outcomes.total += +operation.amount;
-            report.outcomes.details[index].totalAmount += +operation.amount;
-            report.outcomes.contractors[
-              lastIndex
-            ].periods.total += +operation.amount;
+            const converted =
+              conversionRates[operation.account] * +operation.amount;
+            period.totalAmount += converted;
+            report.outcomes.total += converted;
+            report.outcomes.details[index].totalAmount += converted;
+            report.outcomes.contractors[lastIndex].periods.total += converted;
           }
         }
       );

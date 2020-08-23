@@ -19,8 +19,8 @@ exports.getTransactions = async (req, res, next) => {
     contractor,
     project,
     status,
-    page,
-    rowsPerPage,
+    // page,
+    // rowsPerPage,
   } = req.body;
   try {
     let query = {};
@@ -54,9 +54,9 @@ exports.getTransactions = async (req, res, next) => {
       .populate("project")
       .populate("category")
       .populate("contractor")
-      .sort({ date: -1, createdAt: -1 })
-      .skip(page * rowsPerPage)
-      .limit(rowsPerPage);
+      .sort({ date: -1, createdAt: -1 });
+    // .skip(page * rowsPerPage)
+    // .limit(rowsPerPage);
 
     res.status(200).json({
       message: "Transactions fetched successfully.",

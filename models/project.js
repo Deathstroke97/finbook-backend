@@ -3,11 +3,14 @@ const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const Transaction = require("./transaction");
 const Account = require("./account");
+const Business = require("./business");
 const axios = require("axios");
 
 const {
   calculateBalance,
   filterEmptyCategoriesCashFlow,
+  populateWithBuckets,
+  getConversionRates,
 } = require("../utils/functions");
 const {
   getEmptyProjectTransactions,
@@ -104,7 +107,6 @@ projectSchema.statics.generateCashFlowByProject = async function (
         "transactions.business:": 0,
         "transactions.contractor": 0,
         "transactions.project": 0,
-        "transactions.account:": 0,
         "transactions.createdAt": 0,
         "transactions.updatedAt:": 0,
         "transactions.accountBalance": 0,
@@ -190,9 +192,18 @@ projectSchema.statics.generateCashFlowByProject = async function (
   );
   aggResult.push(emptyProject);
 
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
+
   const mainReport = getProjectsReport(aggResult, queryData);
   mainReport.projects.forEach((project) => {
-    constructReportByCategory(project.categories, project.report, queryData);
+    constructReportByCategory(
+      project.categories,
+      project.report,
+      conversionRates,
+      queryData
+    );
   });
   mainReport.projects.forEach((project) => {
     calculateBalance(project.report);
@@ -200,8 +211,18 @@ projectSchema.statics.generateCashFlowByProject = async function (
     delete project.categories;
   });
 
-  await Account.getMoneyInTheBeginning(businessId, countPlanned, mainReport);
-  await Account.getMoneyInTheEnd(businessId, countPlanned, mainReport);
+  await Account.getMoneyInTheBeginning(
+    businessId,
+    countPlanned,
+    mainReport,
+    conversionRates
+  );
+  await Account.getMoneyInTheEnd(
+    businessId,
+    countPlanned,
+    mainReport,
+    conversionRates
+  );
   calculateProjectsBalance(mainReport);
 
   return mainReport;
@@ -266,16 +287,27 @@ projectSchema.statics.generateProfitAndLossByProject = async function (
     select: "name",
   });
 
+  const accounts = await Account.find({ business: businessId });
+  const business = await Business.findById(businessId);
+  const conversionRates = await getConversionRates(accounts, business.currency);
+
   const separateCategoriesReport = await Category.constructReportForSeparateCategories(
     queryData,
     countPlanned,
+    conversionRates,
     method
   );
 
   //separate categories's report ready, main report is next
 
   const report = getSkeletonForProfitAndLossByProject(queryData);
-  constructProfitAndLossByProject(aggResult, report, queryData, method);
+  constructProfitAndLossByProject(
+    aggResult,
+    report,
+    conversionRates,
+    queryData,
+    method
+  );
 
   calculateOperatingProfit(report);
   report.separateCategoriesReport = separateCategoriesReport;
@@ -369,6 +401,32 @@ projectSchema.methods.getFactSumTransactions = async function () {
   this.factOutcome = transactions.totalOutcome;
   await this.save();
 };
+
+// projectSchema.methods.getProjectTransactionsForPeriod = async function (
+//   transactionsDates
+// ) {
+//   const Account = mongoose.model("Account");
+//   const Business = mongoose.model("Business");
+//   const buckets = populateWithBuckets({createTime: transactionsDates.date})
+//   const aggResult = await Transaction.aggregate([
+//     {
+//       $match: {
+//         business: ObjectId(businessId),
+//         date:
+//       }
+//     }
+//   ])
+//   const transactions = await Transaction.find({
+//     project: this.projectId,
+//     ...transactionsDates
+//   })
+//   for (const transaction of transactions) {
+//     let opMonth = moment(transaction.date).month();
+//     let opYear = moment(transaction.date).year();
+
+//   }
+
+// };
 
 const Project = mongoose.model("Project", projectSchema);
 

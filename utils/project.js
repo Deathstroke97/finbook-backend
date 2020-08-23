@@ -171,6 +171,7 @@ exports.getSkeletonForProfitAndLossByProject = (queryData) => {
 };
 
 const helperProfitAndLossByProject = (
+  conversionRates,
   array,
   report,
   type,
@@ -202,10 +203,12 @@ const helperProfitAndLossByProject = (
 
         report.projects[lastIndex].periods.details.forEach((period, index) => {
           if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.total += +operation.amount;
-            report.details[index].totalAmount += +operation.amount;
-            report.projects[lastIndex].periods.total += +operation.amount;
+            const converted =
+              conversionRates[operation.account] * +operation.amount;
+            period.totalAmount += converted;
+            report.total += converted;
+            report.details[index].totalAmount += converted;
+            report.projects[lastIndex].periods.total += converted;
           }
         });
       });
@@ -229,10 +232,12 @@ const helperProfitAndLossByProject = (
 
         report.projects[lastIndex].periods.details.forEach((period, index) => {
           if (period.month == opMonth && period.year == opYear) {
-            period.totalAmount += +operation.amount;
-            report.total += +operation.amount;
-            report.details[index].totalAmount += +operation.amount;
-            report.projects[lastIndex].periods.total += +operation.amount;
+            const converted =
+              conversionRates[operation.account] * +operation.amount;
+            period.totalAmount += converted;
+            report.total += converted;
+            report.details[index].totalAmount += converted;
+            report.projects[lastIndex].periods.total += converted;
           }
         });
       });
@@ -243,6 +248,7 @@ const helperProfitAndLossByProject = (
 const constructProfitAndLossByProject = (
   aggResult,
   report,
+  conversionRates,
   queryData,
   method
 ) => {
@@ -273,6 +279,7 @@ const constructProfitAndLossByProject = (
   });
 
   helperProfitAndLossByProject(
+    conversionRates,
     transformed.withProjects,
     report.incomes.withProjects,
     constants.INCOME,
@@ -280,6 +287,7 @@ const constructProfitAndLossByProject = (
     method
   );
   helperProfitAndLossByProject(
+    conversionRates,
     transformed.withoutProjects,
     report.incomes.withoutProjects,
     constants.INCOME,
@@ -287,6 +295,7 @@ const constructProfitAndLossByProject = (
     method
   );
   helperProfitAndLossByProject(
+    conversionRates,
     transformed.withProjects,
     report.outcomes.withProjects,
     constants.OUTCOME,
@@ -294,6 +303,7 @@ const constructProfitAndLossByProject = (
     method
   );
   helperProfitAndLossByProject(
+    conversionRates,
     transformed.withoutProjects,
     report.outcomes.withoutProjects,
     constants.OUTCOME,
@@ -302,14 +312,14 @@ const constructProfitAndLossByProject = (
   );
 };
 
-exports.getGrossProfit = (result) => {
+const getGrossProfit = (result) => {
   return {
     fact: (result.totalIncome.fact - result.totalOutcome.fact).toFixed(2),
     plan: (result.totalIncome.plan - result.totalOutcome.plan).toFixed(2),
   };
 };
 
-exports.getProfitability = (grossProfit, project, result) => {
+const getProfitability = (grossProfit, project, result) => {
   let profitability = {};
   if (+result.totalIncome.fact === 0) {
     profitability.fact = 0;
@@ -330,4 +340,43 @@ exports.getProfitability = (grossProfit, project, result) => {
   return profitability;
 };
 
+exports.calculateProjectDetails = (result, project) => {
+  result.totalIncome.plan = +project.planIncome;
+  result.totalOutcome.plan = +project.planOutcome;
+  result.totalBalance.plan = result.totalIncome.plan - result.totalOutcome.plan;
+  // сalculating percentage values fact/plan
+  //income
+  if (+project.planIncome !== 0) {
+    const percent = (
+      (result.totalIncome.fact * 100) /
+      result.totalIncome.plan
+    ).toFixed(2);
+    result.totalIncome.percent = percent > 100 ? 100 : +percent;
+  }
+  //outcome
+  if (+project.planOutcome !== 0) {
+    const percent = (
+      (result.totalOutcome.fact * 100) /
+      result.totalOutcome.plan
+    ).toFixed(2);
+    result.totalOutcome.percent = percent > 100 ? 100 : +percent;
+  }
+  //balance
+  if (+project.planIncome - project.planOutcome !== 0) {
+    const difference = +project.planIncome - project.planOutcome;
+    const percent = (result.totalBalance.fact * 100) / difference;
+    result.totalBalance.percent = percent > 100 ? 100 : +percent;
+  }
+  //profitability
+  const grossProfit = getGrossProfit(result);
+  result.profitability = getProfitability(grossProfit, project, result);
+  if (+result.profitability.plan !== 0) {
+    const percent =
+      (result.profitability.fact * 100) / result.profitability.plan;
+    result.profitability.percent = percent > 100 ? 100 : +percent;
+  }
+};
+
 exports.constructProfitAndLossByProject = constructProfitAndLossByProject;
+exports.getGrossProfit = getGrossProfit;
+exports.getProfitability = getProfitability;

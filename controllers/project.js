@@ -160,6 +160,18 @@ exports.getProject = async (req, res, next) => {
       ...transactionDates,
     }).countDocuments();
 
+    const queryData = {
+      createTime: {
+        $gte: startTime,
+        $lte: endTime,
+      },
+    };
+    const report = await Project.generateCashFlowByProject(
+      businessId,
+      queryData,
+      false
+    );
+
     res.status(200).json({
       transactions: transformToString(
         transactions,
@@ -171,6 +183,7 @@ exports.getProject = async (req, res, next) => {
         [project],
         constants.COLLECTION_TYPE_PROJECT
       )[0],
+      report: report,
     });
   } catch (error) {
     if (!error.statusCode) {
