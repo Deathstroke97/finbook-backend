@@ -31,7 +31,6 @@ const categorySchema = new Schema({
   business: {
     type: Schema.Types.ObjectId,
     ref: "Business",
-    required: true,
   },
   isOwnerTransfer: Boolean,
   kind: {
@@ -41,6 +40,7 @@ const categorySchema = new Schema({
   type: {
     type: Number,
     required: true,
+    //доход или расход 1 or 2
   },
   isSystem: {
     type: Boolean,
@@ -80,6 +80,7 @@ categorySchema.statics.generateCashFlowByCategory = async function (
           $gte: new Date(queryData.createTime.$gte),
           $lte: new Date(queryData.createTime.$lte),
         },
+        "transactions.business": ObjectId(businessId),
         ...filterPlanned,
       },
     },
@@ -120,12 +121,13 @@ categorySchema.statics.generateCashFlowByCategory = async function (
     countPlanned,
     queryData
   );
+
   aggResult.push(emptyCategories);
+
   //если при нажатии статьи захотим модалку с операциями то надо использовать код ниже
   //но в constructReportByCategory сломается operation.account
   // await populateTransactions(aggResult);
 
-  console.log("queryData: ", queryData);
   const report = getSkeletonForCategoryReport(queryData);
 
   const accounts = await Account.find({ business: businessId });
@@ -186,6 +188,7 @@ categorySchema.statics.generateCashFlowByActivity = async function (
           $gte: new Date(queryData.createTime.$gte),
           $lte: new Date(queryData.createTime.$lte),
         },
+        "transactions.business": ObjectId(businessId),
         ...filterPlanned,
       },
     },
@@ -348,6 +351,7 @@ categorySchema.statics.generateProfitAndLossByCategory = async function (
   const conversionRates = await getConversionRates(accounts, business.currency);
 
   const separateCategoriesReport = await this.constructReportForSeparateCategories(
+    businessId,
     queryData,
     countPlanned,
     conversionRates,
@@ -372,11 +376,13 @@ categorySchema.statics.generateProfitAndLossByCategory = async function (
 };
 
 categorySchema.statics.constructReportForSeparateCategories = async (
+  businessId,
   queryData,
   countPlanned,
   conversionRates,
   method
 ) => {
+  console.log("queryData: ", queryData);
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
   const Category = mongoose.model("Category", categorySchema);
   const separateCategoriesIds = [
@@ -409,6 +415,7 @@ categorySchema.statics.constructReportForSeparateCategories = async (
           $gte: new Date(queryData.createTime.$gte),
           $lte: new Date(queryData.createTime.$lte),
         },
+        "transactions.business": ObjectId(businessId),
         ...filterPlanned,
       },
     },

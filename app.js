@@ -5,6 +5,8 @@ const path = require("path");
 const app = express();
 
 const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/user");
+const businessRoutes = require("./routes/business");
 const categoryRoutes = require("./routes/category");
 const projectRoutes = require("./routes/project");
 const contractorRoutes = require("./routes/contractor");
@@ -30,6 +32,8 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 
 app.use("/auth", authRoutes);
+app.use(businessRoutes);
+app.use(userRoutes);
 app.use(categoryRoutes);
 app.use(projectRoutes);
 app.use(contractorRoutes);

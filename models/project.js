@@ -292,6 +292,7 @@ projectSchema.statics.generateProfitAndLossByProject = async function (
   const conversionRates = await getConversionRates(accounts, business.currency);
 
   const separateCategoriesReport = await Category.constructReportForSeparateCategories(
+    businessId,
     queryData,
     countPlanned,
     conversionRates,
@@ -314,9 +315,11 @@ projectSchema.statics.generateProfitAndLossByProject = async function (
   return report;
 };
 
-projectSchema.methods.getFactSumTransactions = async function () {
+projectSchema.methods.getFactSumTransactions = async function (
+  conversionRates
+) {
   const Account = mongoose.model("Account");
-  const Business = mongoose.model("Business");
+
   const aggResult = await Account.aggregate([
     {
       $match: {
@@ -342,7 +345,7 @@ projectSchema.methods.getFactSumTransactions = async function () {
     },
     {
       $group: {
-        _id: { account: "$name" },
+        _id: { _id: "$_id" },
         currency: { $first: "$currency" },
         operations: { $push: "$transactions" },
       },
@@ -373,60 +376,27 @@ projectSchema.methods.getFactSumTransactions = async function () {
     totalIncome: 0,
     totalOutcome: 0,
   };
-  const business = await Business.findById(this.business);
 
   for (const account of aggResult) {
     let income = 0;
     let outcome = 0;
 
-    account.incomeOperations.forEach(
-      (operation) => (income += +operation.amount)
-    );
-    account.outcomeOperations.forEach(
-      (operation) => (outcome += +operation.amount)
-    );
+    account.incomeOperations.forEach((operation) => {
+      income += conversionRates[account._id._id] * +operation.amount;
+    });
+    account.outcomeOperations.forEach((operation) => {
+      outcome += conversionRates[account._id._id] * +operation.amount;
+    });
 
-    let exchangeRate = 1;
-    if (account.currency != business.currency) {
-      // const response = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${account.currency}_${business.currency}&compact=ultra&apiKey=763858c5637f159b8186`
-      // );
-      // exchangeRate = response.data[`${account.currency}_${business.currency}`];
-    }
-
-    transactions.totalIncome += exchangeRate * income;
-    transactions.totalOutcome += exchangeRate * outcome;
+    transactions.totalIncome += income;
+    transactions.totalOutcome += outcome;
   }
+
   this.factIncome = transactions.totalIncome;
   this.factOutcome = transactions.totalOutcome;
+
   await this.save();
 };
-
-// projectSchema.methods.getProjectTransactionsForPeriod = async function (
-//   transactionsDates
-// ) {
-//   const Account = mongoose.model("Account");
-//   const Business = mongoose.model("Business");
-//   const buckets = populateWithBuckets({createTime: transactionsDates.date})
-//   const aggResult = await Transaction.aggregate([
-//     {
-//       $match: {
-//         business: ObjectId(businessId),
-//         date:
-//       }
-//     }
-//   ])
-//   const transactions = await Transaction.find({
-//     project: this.projectId,
-//     ...transactionsDates
-//   })
-//   for (const transaction of transactions) {
-//     let opMonth = moment(transaction.date).month();
-//     let opYear = moment(transaction.date).year();
-
-//   }
-
-// };
 
 const Project = mongoose.model("Project", projectSchema);
 

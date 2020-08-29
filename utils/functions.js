@@ -170,6 +170,15 @@ exports.transformToString = (array, collectionType) => {
       };
     });
   }
+  if (collectionType === constants.COLLECTION_TYPE_ACCOUNT) {
+    array = array.map((el) => {
+      return {
+        ...el._doc,
+        balance: parseFloat(el.balance).toFixed(2),
+        initialBalance: parseFloat(el.initialBalance).toFixed(2),
+      };
+    });
+  }
   return array;
 };
 
@@ -213,12 +222,15 @@ exports.getConversionRates = async (accounts, businessCurrency) => {
   let conversion_rates = {};
   for (const account of accounts) {
     const accountCurrency = account.currency;
+    let exchangeRate = 1;
 
     try {
       // const resourse1 = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${accountCurrency}_${businessCurrency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      //   `https://free.currconv.com/api/v7/convert?q=${accountCurrency}_${businessCurrency}&compact=ultra&apiKey=763858c5637f159b8186`
       // );
       // exchangeRate = resourse1.data[`${accountCurrency}_${businessCurrency}`];
+      // conversion_rates[accountCurrency] = exchangeRate;
+      // conversion_rates[account._id] = exchangeRate;
       conversion_rates[accountCurrency] = 1;
       conversion_rates[account._id] = 1;
     } catch (err) {
@@ -314,10 +326,9 @@ exports.getExchageRate = async (account, business) => {
 
     try {
       // const resourse1 = await axios.get(
-      //   `https://free.currconv.com/api/v7/convert?q=${accountCurrency}_${businessCurrency}&compact=ultra&apiKey=8c36daab09adfc1b0ab5`
+      //   `https://free.currconv.com/api/v7/convert?q=${accountCurrency}_${businessCurrency}&compact=ultra&apiKey=763858c5637f159b8186`
       // );
       // exchangeRate = resourse1.data[`${accountCurrency}_${businessCurrency}`];
-      exchangeRate = 1;
     } catch (err) {
       try {
         const resourse2 = await axios.get(

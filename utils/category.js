@@ -244,7 +244,9 @@ const calculateOperatingProfit = (report) => {
     outcomes.withProjects.total + outcomes.withoutProjects.total;
   const totalBalance = totalIncome - totalOutcome;
   operatingProfit.total = totalBalance;
-  operatingProfitability.total = (totalBalance * 100) / totalIncome;
+  if (totalIncome !== 0) {
+    operatingProfitability.total = (totalBalance * 100) / totalIncome;
+  }
 };
 
 const helperProfitAndLossByCategory = (

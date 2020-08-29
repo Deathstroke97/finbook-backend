@@ -62,7 +62,6 @@ exports.login = async (req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    console.log("loadedUser: ", loadedUser.business);
 
     const token = jwt.sign(
       {
@@ -74,16 +73,13 @@ exports.login = async (req, res, next) => {
       // { expiresIn: "1h" }
     );
     const business = await Business.findById(loadedUser.business);
-
     res.status(200).json({
-      token: token,
-      userId: loadedUser._id.toString(),
-      name: user.name,
-      business: business,
-      // businessId: user.business,
-      businessName: user.businessName,
-      businessCurrency: business.currency,
-      businessCreationDate: business.createdAt,
+      token,
+      user: {
+        ...user._doc,
+        password: "",
+      },
+      business,
     });
   } catch (err) {
     if (!err.statusCode) {

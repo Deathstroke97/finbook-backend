@@ -1,8 +1,10 @@
 const Project = require("../models/project");
 const Account = require("../models/account");
+const Business = require("../models/business");
 const Transaction = require("../models/transaction");
 const { getOverallNumbers, transformToString } = require("../utils/functions");
 const constants = require("../constants");
+const { getConversionRates } = require("../utils/functions");
 
 exports.getProjects = async (req, res, next) => {
   const businessId = req.businessId;
@@ -18,8 +20,15 @@ exports.getProjects = async (req, res, next) => {
       .skip(page * rowsPerPage)
       .limit(rowsPerPage);
 
+    const business = await Business.findById(businessId);
+    const accounts = await Account.find({ business: businessId });
+    const conversionRates = await getConversionRates(
+      accounts,
+      business.currency
+    );
+
     for (const project of projects) {
-      await project.getFactSumTransactions();
+      await project.getFactSumTransactions(conversionRates);
     }
     const totalItems = await Project.find(query).countDocuments();
     res.status(200).json({

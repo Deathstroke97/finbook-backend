@@ -26,6 +26,11 @@ const accountSchema = new Schema({
     type: String,
     required: true,
   },
+  type: {
+    type: String,
+    enum: ["account", "cashbox"],
+    default: "account",
+  },
   business: {
     type: Schema.Types.ObjectId,
     ref: "Business",
@@ -36,10 +41,11 @@ const accountSchema = new Schema({
     enum: ["RUB", "EUR", "USD", "KZT", "UAH", "GBP", "BYN"],
     required: true,
   },
-  number: {
+  bankNumber: {
     type: String,
   },
   bankName: String,
+  bik: String,
   balance: {
     type: Schema.Types.Decimal128,
     default: 0,
@@ -416,9 +422,11 @@ accountSchema.statics.getMoneyInBusiness = async function (businessId) {
   };
   const business = await Business.findById(businessId);
   const accounts = await Account.find({ business: ObjectId(businessId) });
+  const conversionRates = await getConversionRates(accounts, business.currency);
 
   for (const account of accounts) {
-    const converted = await convertToBusinessCurrency(account, business);
+    const converted = conversionRates[account._id] * +account.balance;
+
     moneyInBusiness.total += converted;
     moneyInBusiness.accounts.push({
       name: account.name,

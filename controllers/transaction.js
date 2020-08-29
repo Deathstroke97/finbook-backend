@@ -151,12 +151,6 @@ exports.updateTransaction = async (req, res, next) => {
       }
     }
 
-    if (transaction.contractor && contractor) {
-      if (transaction.contractor.toString() !== contractor) {
-        await transaction.updateContractor(contractor);
-      }
-    }
-
     if (parseFloat(transaction.amount).toFixed(2) != amount) {
       await transaction.updateAmount(amount);
     }
@@ -164,6 +158,12 @@ exports.updateTransaction = async (req, res, next) => {
     const transactionDate = moment(transaction.date).format("YYYY-MM-DD");
     if (transactionDate !== date) {
       await transaction.updateDate(date);
+    }
+
+    if (transaction.contractor && contractor) {
+      if (transaction.contractor.toString() !== contractor) {
+        await transaction.updateContractor(contractor);
+      }
     }
 
     if (!isObligation && transaction.isObligation) {
@@ -211,6 +211,7 @@ exports.updateTransaction = async (req, res, next) => {
 };
 
 exports.deleteTransactions = async (req, res, next) => {
+  console.log("transactions: ", req.body.transactions);
   const transactionId = req.params.transactionId;
   const transactions = req.body.transactions;
 
