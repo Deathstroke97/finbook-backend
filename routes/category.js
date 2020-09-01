@@ -10,12 +10,4 @@ router.get("/categories", isAuth, categoryController.getCategories);
 
 router.post("/category", isAuth, categoryController.postCategory);
 
-router.put("/category/:categoryId", isAuth, categoryController.updateCategory);
-
-router.delete(
-  "/category/:categoryId",
-  isAuth,
-  categoryController.deleteCategory
-);
-
 module.exports = router;

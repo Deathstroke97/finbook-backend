@@ -18,7 +18,7 @@ exports.getTransfers = async (req, res, next) => {
 };
 
 exports.createTransfer = async (req, res, next) => {
-  const businessId = req.businessId;
+  const businessId = req.body.businessId;
   const {
     exchangeRate,
     amount,
@@ -33,7 +33,7 @@ exports.createTransfer = async (req, res, next) => {
     fromAccount.balance = +fromAccount.balance - amount;
     await fromAccount.save();
     const toAccount = await Account.findById(toBankAccount);
-    toAccount.balance = +toAccount.balance + +exchangeRate * +amount;
+    toAccount.balance = +toAccount.balance + exchangeRate * amount;
     await toAccount.save();
 
     const transfer = new Transfer({

@@ -3,7 +3,6 @@ const Business = require("../models/business");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const moment = require("moment");
 
 exports.signup = async (req, res, next) => {
   const email = req.body.email;
@@ -26,8 +25,9 @@ exports.signup = async (req, res, next) => {
     const business = new Business({
       name: businessName,
       owner: newUser._id,
-      activationDate: moment(),
-      activationEndDate: moment().add(7, "days"),
+      totalIncome: 0,
+      totalOutcome: 0,
+      totalBalance: 0,
     });
     await business.save();
     newUser.business = business._id;

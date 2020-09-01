@@ -19,8 +19,6 @@ const businessSchema = new Schema(
       required: true,
       default: "KZT",
     },
-    activationDate: Date,
-    activationEndDate: Date,
   },
   { timestamps: true }
 );
