@@ -4,15 +4,12 @@
   "description": "backend of finbook",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "client": "cd client && npm start",
-    "start": "node app.js",
-    "dev": "concurrently -n 'server, client' -c 'red,green' \"nodemon app.js\" \"npm run client\"",
     "build": "cd client && npm run build",
     "install-client": "cd client && npm install",
     "heroku-postbuild": "npm run install-client && npm build",
-    "start-server": "node app.js",
-    "start:dev": "nodemon app.js"
+    "start": "NODE_ENV=production node app.js",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"npm run start\" \"npm run client\""
   },
   "author": "Azat Saparbekov",
   "license": "ISC",
