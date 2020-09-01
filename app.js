@@ -21,7 +21,9 @@ const transferRoutes = require("./routes/transfer");
 const transactionRoutes = require("./routes/transaction");
 const reportRoutes = require("./routes/reports");
 
-const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0-sqi3q.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}`;
+// const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0-sqi3q.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}`;
+
+const MONGODB_URI = `mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/finbook`;
 
 // const privateKey = fs.readFileSync("server.key");
 // const certificate = fs.readFileSync("server.cert");
@@ -83,7 +85,9 @@ mongoose
   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
   .then(() => {
     console.log("connected to database");
+    const port = process.env.PORT;
     app.listen(process.env.PORT || 8081);
+    console.log("Server is started on PORT: ", port);
   })
   .catch((err) => console.log(err));
 

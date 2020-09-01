@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"nodemon app.js\" \"npm run client\"",
     "build": "cd client && npm run build",
     "install-client": "cd client && npm install",
     "heroku-postbuild": "npm run install-client && npm build",
-    "start": "NODE_ENV=production MONGO_USER=Azat MONGO_PASSWORD=wilsonslade MONGO_DEFAULT_DATABASE=finbook node app.js",
     "start-server": "node app.js",
     "start:dev": "nodemon app.js"
   },
@@ -19,6 +20,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
     "compression": "^1.7.4",
+    "concurrently": "^5.3.0",
     "express": "^4.17.1",
     "express-validator": "^6.4.1",
     "helmet": "^4.1.0",
