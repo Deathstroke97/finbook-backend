@@ -28,6 +28,10 @@ const MONGODB_URI = `mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/f
 // const privateKey = fs.readFileSync("server.key");
 // const certificate = fs.readFileSync("server.cert");
 
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static("client/build"));
+}
+
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -70,10 +74,6 @@ app.use((error, req, res, next) => {
     data: data,
   });
 });
-
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static("client/build"));
-}
 
 // mongoose
 //   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
