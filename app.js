@@ -44,8 +44,8 @@ const accessLogStream = fs.createWriteStream(
 );
 
 app.use(bodyParser.json());
-app.use(helmet());
-app.use(compression());
+// app.use(helmet());
+// app.use(compression());
 app.use(morgan("combined", { stream: accessLogStream }));
 
 app.use("/auth", authRoutes);
@@ -71,6 +71,10 @@ app.use((error, req, res, next) => {
   });
 });
 
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static("client/build"));
+}
+
 // mongoose
 //   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
 //   .then(() => {
@@ -85,12 +89,8 @@ mongoose
   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
   .then(() => {
     console.log("connected to database");
-    const port = process.env.PORT;
-    app.listen(process.env.PORT || 8081);
+    const port = process.env.PORT || 8081;
+    app.listen(port);
     console.log("Server is started on PORT: ", port);
   })
   .catch((err) => console.log(err));
-
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static("/client/build"));
-}

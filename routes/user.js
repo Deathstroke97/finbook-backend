@@ -8,4 +8,6 @@ const isAuth = require("../middleware/is_auth");
 
 router.put("/user", isAuth, userController.updateUser);
 
+router.get("/user", isAuth, userController.getUser);
+
 module.exports = router;

@@ -41,3 +41,24 @@ exports.updateBusiness = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getBusiness = async (req, res, next) => {
+  const businessId = req.businessId;
+  try {
+    const business = await Business.findById(businessId);
+    if (!business) {
+      const error = new Error("Could not find business.");
+      error.statusCode = 404;
+      throw error;
+    }
+    res.status(200).json({
+      message: "business fetched.",
+      business: business,
+    });
+  } catch (err) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
