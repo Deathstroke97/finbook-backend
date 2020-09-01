@@ -28,10 +28,6 @@ const MONGODB_URI = `mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/f
 // const privateKey = fs.readFileSync("server.key");
 // const certificate = fs.readFileSync("server.cert");
 
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static("client/build"));
-}
-
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -48,8 +44,8 @@ const accessLogStream = fs.createWriteStream(
 );
 
 app.use(bodyParser.json());
-// app.use(helmet());
-// app.use(compression());
+app.use(helmet());
+app.use(compression());
 app.use(morgan("combined", { stream: accessLogStream }));
 
 app.use("/auth", authRoutes);
@@ -94,3 +90,7 @@ mongoose
     console.log("Server is started on PORT: ", port);
   })
   .catch((err) => console.log(err));
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static("client/build"));
+}
