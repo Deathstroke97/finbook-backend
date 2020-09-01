@@ -382,7 +382,6 @@ categorySchema.statics.constructReportForSeparateCategories = async (
   conversionRates,
   method
 ) => {
-  console.log("queryData: ", queryData);
   const filterPlanned = countPlanned ? {} : { "transactions.isPlanned": false };
   const Category = mongoose.model("Category", categorySchema);
   const separateCategoriesIds = [

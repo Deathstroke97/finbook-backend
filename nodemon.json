@@ -1,5 +1,7 @@
 {
   "env": {
-    "MONGO_URI": "mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/finbook"
+    "MONGO_USER": "Azat",
+    "MONGO_PASSWORD": "wilsonslade",
+    "MONGO_DEFAULT_DATABASE": "finbook"
   }
 }

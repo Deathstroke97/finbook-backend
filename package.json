@@ -5,7 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "build": "cd client && npm run build",
+    "install-client": "cd client && npm install",
+    "heroku-postbuild": "npm run install-client && npm build",
+    "start": "NODE_ENV=production MONGO_USER=Azat MONGO_PASSWORD=wilsonslade MONGO_DEFAULT_DATABASE=finbook node app.js",
+    "start-server": "node app.js",
+    "start:dev": "nodemon app.js"
   },
   "author": "Azat Saparbekov",
   "license": "ISC",
@@ -13,11 +18,14 @@
     "axios": "^0.19.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
+    "compression": "^1.7.4",
     "express": "^4.17.1",
     "express-validator": "^6.4.1",
+    "helmet": "^4.1.0",
     "jsonwebtoken": "^8.5.1",
     "moment": "^2.25.3",
     "mongoose": "^5.9.12",
+    "morgan": "^1.10.0",
     "multer": "^1.4.2",
     "socket.io": "^2.3.0"
   },

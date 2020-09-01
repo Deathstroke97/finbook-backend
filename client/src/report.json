@@ -1,0 +1,910 @@
+{
+  "result": {
+    "moneyInTheBeginning": {
+      "total": 0,
+      "details": [
+        {
+          "month": 7,
+          "year": 2020,
+          "totalAmount": 0,
+          "operations": []
+        },
+        {
+          "month": 8,
+          "year": 2020,
+          "totalAmount": 15,
+          "operations": []
+        }
+      ]
+    },
+    "incomes": {
+      "total": 35,
+      "details": [
+        {
+          "month": 7,
+          "year": 2020,
+          "totalAmount": 35,
+          "operations": []
+        },
+        {
+          "month": 8,
+          "year": 2020,
+          "totalAmount": 0,
+          "operations": []
+        }
+      ],
+      "categories": [
+        {
+          "categoryId": "5eb54e96a8701f06b3bc97eb",
+          "name": "Создание сайтов",
+          "periods": {
+            "total": 10,
+            "details": [
+              {
+                "month": 7,
+                "year": 2020,
+                "totalAmount": 10,
+                "operations": []
+              },
+              {
+                "month": 8,
+                "year": 2020,
+                "totalAmount": 0,
+                "operations": []
+              }
+            ]
+          },
+          "operations": [
+            {
+              "_id": "5f269ae3a1b00c098d1ceef4",
+              "isPlanned": false,
+              "isPeriodic": false,
+              "rootOfPeriodicChain": false,
+              "isObligation": false,
+              "business": "5eb54d019b2830063e17582e",
+              "date": "2020-08-02T00:00:00.000Z",
+              "type": "income",
+              "category": {
+                "_id": "5eb54e96a8701f06b3bc97eb",
+                "name": "Создание сайтов"
+              },
+              "project": null,
+              "contractor": {
+                "_id": "5eb7ffc99c5d980918dfc83f",
+                "name": "Olzhas"
+              },
+              "amount": {
+                "$numberDecimal": "4"
+              },
+              "account": {
+                "_id": "5eb944470b90361360860f0f",
+                "name": "Cбербанк"
+              },
+              "description": null,
+              "relatedDate": "2020-08-02T00:00:00.000Z",
+              "accountBalance": {
+                "$numberDecimal": "4"
+              },
+              "period": null,
+              "repetitionEndDate": "2020-08-02T10:52:05.767Z",
+              "createdAt": "2020-08-02T10:52:19.245Z",
+              "updatedAt": "2020-08-04T08:44:50.290Z",
+              "__v": 0
+            },
+            {
+              "_id": "5f2847801c12dc088d2416c8",
+              "isPlanned": false,
+              "isPeriodic": false,
+              "rootOfPeriodicChain": false,
+              "isObligation": false,
+              "business": "5eb54d019b2830063e17582e",
+              "date": "2020-08-03T00:00:00.000Z",
+              "type": "income",
+              "category": {
+                "_id": "5eb54e96a8701f06b3bc97eb",
+                "name": "Создание сайтов"
+              },
+              "project": null,
+              "contractor": null,
+              "amount": {
+                "$numberDecimal": "6"
+              },
+              "account": {
+                "_id": "5eb944470b90361360860f0f",
+                "name": "Cбербанк"
+              },
+              "description": null,
+              "relatedDate": "2020-08-03T00:00:00.000Z",
+              "accountBalance": {
+                "$numberDecimal": "0"
+              },
+              "period": null,
+              "repetitionEndDate": "2020-08-03T17:20:58.980Z",
+              "createdAt": "2020-08-03T17:21:04.935Z",
+              "updatedAt": "2020-08-04T08:44:21.826Z",
+              "__v": 0
+            }
+          ]
+        },
+        {
+          "categoryId": "5ebece9281f7e40ed8f8730b",
+          "name": "Обучение школьников",
+          "periods": {
+            "total": 10,
+            "details": [
+              {
+                "month": 7,
+                "year": 2020,
+                "totalAmount": 10,
+                "operations": []
+              },
+              {
+                "month": 8,
+                "year": 2020,
+                "totalAmount": 0,
+                "operations": []
+              }
+            ]
+          },
+          "operations": [
+            {
+              "_id": "5f2846071c12dc088d2416c4",
+              "isPlanned": false,
+              "isPeriodic": false,
+              "rootOfPeriodicChain": false,
+              "isObligation": true,
+              "business": "5eb54d019b2830063e17582e",
+              "date": "2020-08-03T00:00:00.000Z",
+              "type": "income",
+              "category": {
+                "_id": "5ebece9281f7e40ed8f8730b",
+                "name": "Обучение школьников"
+              },
+              "project": null,
+              "contractor": {
+                "_id": "5eda4e64868dd41af05e8877",
+                "name": "Askar"
+              },
+              "amount": {
+                "$numberDecimal": "10"
+              },
+              "account": {
+                "_id": "5eb944470b90361360860f0f",
+                "name": "Cбербанк"
+              },
+              "description": null,
+              "relatedDate": "2020-08-03T00:00:00.000Z",
+              "accountBalance": {
+                "$numberDecimal": "14"
+              },
+              "period": null,
+              "repetitionEndDate": "2020-08-03T17:14:40.340Z",
+              "createdAt": "2020-08-03T17:14:47.588Z",
+              "updatedAt": "2020-08-04T08:44:41.786Z",
+              "__v": 0,
+              "obligationId": "5f2846101c12dc088d2416c5"
+            }
+          ]
+        },
+        {
+          "categoryId": null,
+          "name": null,
+          "periods": {
+            "total": 15,
+            "details": [
+              {
+                "month": 7,
+                "year": 2020,
+                "totalAmount": 15,
+                "operations": []
+              },
+              {
+                "month": 8,
+                "year": 2020,
+                "totalAmount": 0,
+                "operations": []
+              }
+            ]
+          },
+          "operations": [
+            {
+              "isPlanned": false,
+              "isPeriodic": false,
+              "rootOfPeriodicChain": false,
+              "isObligation": false,
+              "_id": "5f284f001c064f0ca2914def",
+              "business": "5eb54d019b2830063e17582e",
+              "date": "2020-08-03T00:00:00.000Z",
+              "type": "income",
+              "category": null,
+              "project": {
+                "_id": "5eda4e23868dd41af05e8876",
+                "name": "KazTravelFrontend"
+              },
+              "contractor": null,
+              "amount": {
+                "$numberDecimal": "10"
+              },
+              "account": {
+                "_id": "5eb944470b90361360860f0f",
+                "name": "Cбербанк"
+              },
+              "description": null,
+              "relatedDate": "2020-08-03T00:00:00.000Z",
+              "accountBalance": {
+                "$numberDecimal": "10"
+              },
+              "period": null,
+              "repetitionEndDate": "2020-08-03T17:52:54.929Z",
+              "createdAt": "2020-08-03T17:53:04.946Z",
+              "updatedAt": "2020-08-03T17:53:04.946Z",
+              "__v": 0
+            },
+            {
+              "isPlanned": false,
+              "isPeriodic": false,
+              "rootOfPeriodicChain": false,
+              "isObligation": false,
+              "_id": "5f284f161c064f0ca2914df0",
+              "business": "5eb54d019b2830063e17582e",
+              "date": "2020-08-03T00:00:00.000Z",
+              "type": "income",
+              "category": null,
+              "project": {
+                "_id": "5eda4e23868dd41af05e8876",
+                "name": "KazTravelFrontend"
+              },
+              "contractor": null,
+              "amount": {
+                "$numberDecimal": "5"
+              },
+              "account": {
+                "_id": "5eb81a352f2f420bc6f3e8c6",
+                "name": "Kaspi"
+              },
+              "description": null,
+              "relatedDate": "2020-08-03T00:00:00.000Z",
+              "accountBalance": {
+                "$numberDecimal": "5"
+              },
+              "period": null,
+              "repetitionEndDate": "2020-08-03T17:53:18.918Z",
+              "createdAt": "2020-08-03T17:53:26.416Z",
+              "updatedAt": "2020-08-03T17:53:26.416Z",
+              "__v": 0
+            }
+          ]
+        }
+      ]
+    },
+    "outcomes": {
+      "total": 20,
+      "details": [
+        {
+          "month": 7,
+          "year": 2020,
+          "totalAmount": 20,
+          "operations": []
+        },
+        {
+          "month": 8,
+          "year": 2020,
+          "totalAmount": 0,
+          "operations": []
+        }
+      ],
+      "categories": [
+        {
+          "categoryId": "5ebeccadc25ba80e9acef5c6",
+          "name": "Покупка запчастей",
+          "periods": {
+            "total": 20,
+            "details": [
+              {
+                "month": 7,
+                "year": 2020,
+                "totalAmount": 20,
+                "operations": []
+              },
+              {
+                "month": 8,
+                "year": 2020,
+                "totalAmount": 0,
+                "operations": []
+              }
+            ]
+          },
+          "operations": [
+            {
+              "_id": "5f2846221c12dc088d2416c6",
+              "isPlanned": false,
+              "isPeriodic": false,
+              "rootOfPeriodicChain": false,
+              "isObligation": true,
+              "business": "5eb54d019b2830063e17582e",
+              "date": "2020-08-03T00:00:00.000Z",
+              "type": "outcome",
+              "category": {
+                "_id": "5ebeccadc25ba80e9acef5c6",
+                "name": "Покупка запчастей"
+              },
+              "project": null,
+              "contractor": {
+                "_id": "5eda4e64868dd41af05e8877",
+                "name": "Askar"
+              },
+              "amount": {
+                "$numberDecimal": "20"
+              },
+              "account": {
+                "_id": "5eb944470b90361360860f0f",
+                "name": "Cбербанк"
+              },
+              "description": null,
+              "relatedDate": "2020-08-03T00:00:00.000Z",
+              "accountBalance": {
+                "$numberDecimal": "-6"
+              },
+              "period": null,
+              "repetitionEndDate": "2020-08-03T17:15:04.627Z",
+              "createdAt": "2020-08-03T17:15:14.208Z",
+              "updatedAt": "2020-08-04T08:44:32.780Z",
+              "__v": 0,
+              "obligationId": "5f28462e1c12dc088d2416c7"
+            }
+          ]
+        }
+      ]
+    },
+    "balance": {
+      "total": 15,
+      "details": [
+        {
+          "month": 7,
+          "year": 2020,
+          "totalAmount": 15,
+          "operations": []
+        },
+        {
+          "month": 8,
+          "year": 2020,
+          "totalAmount": 0,
+          "operations": []
+        }
+      ]
+    },
+    "moneyInTheEnd": {
+      "total": 15,
+      "details": [
+        {
+          "month": 7,
+          "year": 2020,
+          "totalAmount": 15,
+          "operations": []
+        },
+        {
+          "month": 8,
+          "year": 2020,
+          "totalAmount": 15,
+          "operations": []
+        }
+      ]
+    }
+  }
+}
+
+{
+  "result": {
+      "moneyInTheBeginning": {
+          "total": 0,
+          "details": [
+              {
+                  "month": 7,
+                  "year": 2020,
+                  "totalAmount": 0,
+                  "operations": []
+              },
+              {
+                  "month": 8,
+                  "year": 2020,
+                  "totalAmount": 15,
+                  "operations": []
+              }
+          ]
+      },
+      "financial": {
+          "kind": 1,
+          "report": {
+              "incomes": {
+                  "total": 0,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ],
+                  "categories": []
+              },
+              "outcomes": {
+                  "total": 0,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ],
+                  "categories": []
+              },
+              "balance": {
+                  "total": 0,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ]
+              }
+          }
+      },
+      "investment": {
+          "kind": 2,
+          "report": {
+              "incomes": {
+                  "total": 0,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ],
+                  "categories": []
+              },
+              "outcomes": {
+                  "total": 0,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ],
+                  "categories": []
+              },
+              "balance": {
+                  "total": 0,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ]
+              }
+          }
+      },
+      "operational": {
+          "kind": 3,
+          "report": {
+              "incomes": {
+                  "total": 35,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 35,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ],
+                  "categories": [
+                      {
+                          "categoryId": "5ebece9281f7e40ed8f8730b",
+                          "name": "Обучение школьников",
+                          "periods": {
+                              "total": 10,
+                              "details": [
+                                  {
+                                      "month": 7,
+                                      "year": 2020,
+                                      "totalAmount": 10,
+                                      "operations": []
+                                  },
+                                  {
+                                      "month": 8,
+                                      "year": 2020,
+                                      "totalAmount": 0,
+                                      "operations": []
+                                  }
+                              ]
+                          },
+                          "operations": [
+                              {
+                                  "_id": "5f2846071c12dc088d2416c4",
+                                  "isPlanned": false,
+                                  "isPeriodic": false,
+                                  "rootOfPeriodicChain": false,
+                                  "isObligation": true,
+                                  "business": "5eb54d019b2830063e17582e",
+                                  "date": "2020-08-03T00:00:00.000Z",
+                                  "type": "income",
+                                  "category": {
+                                      "_id": "5ebece9281f7e40ed8f8730b",
+                                      "name": "Обучение школьников"
+                                  },
+                                  "project": null,
+                                  "contractor": {
+                                      "_id": "5eda4e64868dd41af05e8877",
+                                      "name": "Askar"
+                                  },
+                                  "amount": {
+                                      "$numberDecimal": "10"
+                                  },
+                                  "account": {
+                                      "_id": "5eb944470b90361360860f0f",
+                                      "name": "Cбербанк"
+                                  },
+                                  "description": null,
+                                  "relatedDate": "2020-08-03T00:00:00.000Z",
+                                  "accountBalance": {
+                                      "$numberDecimal": "14"
+                                  },
+                                  "period": null,
+                                  "repetitionEndDate": "2020-08-03T17:14:40.340Z",
+                                  "createdAt": "2020-08-03T17:14:47.588Z",
+                                  "updatedAt": "2020-08-04T08:44:41.786Z",
+                                  "__v": 0,
+                                  "obligationId": "5f2846101c12dc088d2416c5"
+                              }
+                          ]
+                      },
+                      {
+                          "categoryId": "5eb54e96a8701f06b3bc97eb",
+                          "name": "Создание сайтов",
+                          "periods": {
+                              "total": 10,
+                              "details": [
+                                  {
+                                      "month": 7,
+                                      "year": 2020,
+                                      "totalAmount": 10,
+                                      "operations": []
+                                  },
+                                  {
+                                      "month": 8,
+                                      "year": 2020,
+                                      "totalAmount": 0,
+                                      "operations": []
+                                  }
+                              ]
+                          },
+                          "operations": [
+                              {
+                                  "_id": "5f269ae3a1b00c098d1ceef4",
+                                  "isPlanned": false,
+                                  "isPeriodic": false,
+                                  "rootOfPeriodicChain": false,
+                                  "isObligation": false,
+                                  "business": "5eb54d019b2830063e17582e",
+                                  "date": "2020-08-02T00:00:00.000Z",
+                                  "type": "income",
+                                  "category": {
+                                      "_id": "5eb54e96a8701f06b3bc97eb",
+                                      "name": "Создание сайтов"
+                                  },
+                                  "project": null,
+                                  "contractor": {
+                                      "_id": "5eb7ffc99c5d980918dfc83f",
+                                      "name": "Olzhas"
+                                  },
+                                  "amount": {
+                                      "$numberDecimal": "4"
+                                  },
+                                  "account": {
+                                      "_id": "5eb944470b90361360860f0f",
+                                      "name": "Cбербанк"
+                                  },
+                                  "description": null,
+                                  "relatedDate": "2020-08-02T00:00:00.000Z",
+                                  "accountBalance": {
+                                      "$numberDecimal": "4"
+                                  },
+                                  "period": null,
+                                  "repetitionEndDate": "2020-08-02T10:52:05.767Z",
+                                  "createdAt": "2020-08-02T10:52:19.245Z",
+                                  "updatedAt": "2020-08-04T08:44:50.290Z",
+                                  "__v": 0
+                              },
+                              {
+                                  "_id": "5f2847801c12dc088d2416c8",
+                                  "isPlanned": false,
+                                  "isPeriodic": false,
+                                  "rootOfPeriodicChain": false,
+                                  "isObligation": false,
+                                  "business": "5eb54d019b2830063e17582e",
+                                  "date": "2020-08-03T00:00:00.000Z",
+                                  "type": "income",
+                                  "category": {
+                                      "_id": "5eb54e96a8701f06b3bc97eb",
+                                      "name": "Создание сайтов"
+                                  },
+                                  "project": null,
+                                  "contractor": null,
+                                  "amount": {
+                                      "$numberDecimal": "6"
+                                  },
+                                  "account": {
+                                      "_id": "5eb944470b90361360860f0f",
+                                      "name": "Cбербанк"
+                                  },
+                                  "description": null,
+                                  "relatedDate": "2020-08-03T00:00:00.000Z",
+                                  "accountBalance": {
+                                      "$numberDecimal": "0"
+                                  },
+                                  "period": null,
+                                  "repetitionEndDate": "2020-08-03T17:20:58.980Z",
+                                  "createdAt": "2020-08-03T17:21:04.935Z",
+                                  "updatedAt": "2020-08-04T08:44:21.826Z",
+                                  "__v": 0
+                              }
+                          ]
+                      },
+                      {
+                          "categoryId": null,
+                          "name": null,
+                          "periods": {
+                              "total": 15,
+                              "details": [
+                                  {
+                                      "month": 7,
+                                      "year": 2020,
+                                      "totalAmount": 15,
+                                      "operations": []
+                                  },
+                                  {
+                                      "month": 8,
+                                      "year": 2020,
+                                      "totalAmount": 0,
+                                      "operations": []
+                                  }
+                              ]
+                          },
+                          "operations": [
+                              {
+                                  "isPlanned": false,
+                                  "isPeriodic": false,
+                                  "rootOfPeriodicChain": false,
+                                  "isObligation": false,
+                                  "_id": "5f284f001c064f0ca2914def",
+                                  "business": "5eb54d019b2830063e17582e",
+                                  "date": "2020-08-03T00:00:00.000Z",
+                                  "type": "income",
+                                  "category": null,
+                                  "project": {
+                                      "_id": "5eda4e23868dd41af05e8876",
+                                      "name": "KazTravelFrontend"
+                                  },
+                                  "contractor": null,
+                                  "amount": {
+                                      "$numberDecimal": "10"
+                                  },
+                                  "account": {
+                                      "_id": "5eb944470b90361360860f0f",
+                                      "name": "Cбербанк"
+                                  },
+                                  "description": null,
+                                  "relatedDate": "2020-08-03T00:00:00.000Z",
+                                  "accountBalance": {
+                                      "$numberDecimal": "10"
+                                  },
+                                  "period": null,
+                                  "repetitionEndDate": "2020-08-03T17:52:54.929Z",
+                                  "createdAt": "2020-08-03T17:53:04.946Z",
+                                  "updatedAt": "2020-08-03T17:53:04.946Z",
+                                  "__v": 0
+                              },
+                              {
+                                  "isPlanned": false,
+                                  "isPeriodic": false,
+                                  "rootOfPeriodicChain": false,
+                                  "isObligation": false,
+                                  "_id": "5f284f161c064f0ca2914df0",
+                                  "business": "5eb54d019b2830063e17582e",
+                                  "date": "2020-08-03T00:00:00.000Z",
+                                  "type": "income",
+                                  "category": null,
+                                  "project": {
+                                      "_id": "5eda4e23868dd41af05e8876",
+                                      "name": "KazTravelFrontend"
+                                  },
+                                  "contractor": null,
+                                  "amount": {
+                                      "$numberDecimal": "5"
+                                  },
+                                  "account": {
+                                      "_id": "5eb81a352f2f420bc6f3e8c6",
+                                      "name": "Kaspi"
+                                  },
+                                  "description": null,
+                                  "relatedDate": "2020-08-03T00:00:00.000Z",
+                                  "accountBalance": {
+                                      "$numberDecimal": "5"
+                                  },
+                                  "period": null,
+                                  "repetitionEndDate": "2020-08-03T17:53:18.918Z",
+                                  "createdAt": "2020-08-03T17:53:26.416Z",
+                                  "updatedAt": "2020-08-03T17:53:26.416Z",
+                                  "__v": 0
+                              }
+                          ]
+                      }
+                  ]
+              },
+              "outcomes": {
+                  "total": 20,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 20,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ],
+                  "categories": [
+                      {
+                          "categoryId": "5ebeccadc25ba80e9acef5c6",
+                          "name": "Покупка запчастей",
+                          "periods": {
+                              "total": 20,
+                              "details": [
+                                  {
+                                      "month": 7,
+                                      "year": 2020,
+                                      "totalAmount": 20,
+                                      "operations": []
+                                  },
+                                  {
+                                      "month": 8,
+                                      "year": 2020,
+                                      "totalAmount": 0,
+                                      "operations": []
+                                  }
+                              ]
+                          },
+                          "operations": [
+                              {
+                                  "_id": "5f2846221c12dc088d2416c6",
+                                  "isPlanned": false,
+                                  "isPeriodic": false,
+                                  "rootOfPeriodicChain": false,
+                                  "isObligation": true,
+                                  "business": "5eb54d019b2830063e17582e",
+                                  "date": "2020-08-03T00:00:00.000Z",
+                                  "type": "outcome",
+                                  "category": {
+                                      "_id": "5ebeccadc25ba80e9acef5c6",
+                                      "name": "Покупка запчастей"
+                                  },
+                                  "project": null,
+                                  "contractor": {
+                                      "_id": "5eda4e64868dd41af05e8877",
+                                      "name": "Askar"
+                                  },
+                                  "amount": {
+                                      "$numberDecimal": "20"
+                                  },
+                                  "account": {
+                                      "_id": "5eb944470b90361360860f0f",
+                                      "name": "Cбербанк"
+                                  },
+                                  "description": null,
+                                  "relatedDate": "2020-08-03T00:00:00.000Z",
+                                  "accountBalance": {
+                                      "$numberDecimal": "-6"
+                                  },
+                                  "period": null,
+                                  "repetitionEndDate": "2020-08-03T17:15:04.627Z",
+                                  "createdAt": "2020-08-03T17:15:14.208Z",
+                                  "updatedAt": "2020-08-04T08:44:32.780Z",
+                                  "__v": 0,
+                                  "obligationId": "5f28462e1c12dc088d2416c7"
+                              }
+                          ]
+                      }
+                  ]
+              },
+              "balance": {
+                  "total": 15,
+                  "details": [
+                      {
+                          "month": 7,
+                          "year": 2020,
+                          "totalAmount": 15,
+                          "operations": []
+                      },
+                      {
+                          "month": 8,
+                          "year": 2020,
+                          "totalAmount": 0,
+                          "operations": []
+                      }
+                  ]
+              }
+          }
+      },
+      "moneyInTheEnd": {
+          "total": 15,
+          "details": [
+              {
+                  "month": 7,
+                  "year": 2020,
+                  "totalAmount": 15,
+                  "operations": []
+              },
+              {
+                  "month": 8,
+                  "year": 2020,
+                  "totalAmount": 15,
+                  "operations": []
+              }
+          ]
+      }
+  }
+}
