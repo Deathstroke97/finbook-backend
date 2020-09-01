@@ -1,0 +1,5 @@
+{
+  "env": {
+    "MONGO_URI": "mongodb+srv://Azat:wilsonslade@cluster0-sqi3q.mongodb.net/finbook"
+  }
+}
