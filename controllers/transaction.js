@@ -167,6 +167,7 @@ exports.updateTransaction = async (req, res, next) => {
     }
 
     if (!isObligation && transaction.isObligation) {
+      console.log("if statement: ", req.body);
       await transaction.updateIsObligation(isObligation, contractor);
     }
 
@@ -210,6 +211,7 @@ exports.updateTransaction = async (req, res, next) => {
 };
 
 exports.deleteTransactions = async (req, res, next) => {
+  console.log("transactions: ", req.body.transactions);
   const transactionId = req.params.transactionId;
   const transactions = req.body.transactions;
 
