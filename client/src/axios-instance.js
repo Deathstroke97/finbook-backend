@@ -1,9 +1,7 @@
 import axios from "axios";
 
 const defaultOptions = {
-  // baseURL: "http://localhost:8081",
-  // baseURL: "http://192.168.43.2:8081",
-  baseURL: "https://finbook-version-2.herokuapp.com",
+  // baseURL: "https://finbook-version-2.herokuapp.com",
   headers: {
     "Content-Type": "application/json",
   },

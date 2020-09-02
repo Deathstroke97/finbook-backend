@@ -44,8 +44,8 @@ const accessLogStream = fs.createWriteStream(
 );
 
 app.use(bodyParser.json());
-app.use(helmet());
-app.use(compression());
+// app.use(helmet());
+// app.use(compression());
 app.use(morgan("combined", { stream: accessLogStream }));
 
 app.use("/auth", authRoutes);
