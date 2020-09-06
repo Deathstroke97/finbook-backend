@@ -89,13 +89,21 @@ exports.updateAccount = async (req, res, next) => {
       const diff = +account.initialBalance - initialBalance;
       account.balance = +account.balance - diff;
       account.initialBalance = initialBalance;
-      const transactions = await Transaction.find({ account: accountId }).sort({
-        date: 1,
-        createdAt: 1,
-      });
-      for (const transaction of transactions) {
-        transaction.accountBalance = +transaction.amount + +initialBalance;
-        await transaction.save();
+      const transactions = await Transaction.find({ account: accountId })
+        .sort({
+          date: 1,
+          createdAt: 1,
+        })
+        .limit(1);
+      if (transactions.length > 0) {
+        const startTransaction = transactions[0];
+        startTransaction.accountBalance =
+          +startTransaction.amount + +initialBalance;
+        await startTransaction.save();
+        const range = await startTransaction.getRangeInAscLowerBound(
+          startTransaction.date
+        );
+        await startTransaction.updateBalanceInRange(range);
       }
     }
 

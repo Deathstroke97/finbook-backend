@@ -146,7 +146,7 @@ const EnhancedTable = (props) => {
   //   return type === constants.OPERATION_INCOME ? `+${result}` : `${result}`;
   // };
   const getAmount = (amount, type) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    let amountValue = parseFloat(amount).toLocaleString();
     if (type && type === constants.OPERATION_INCOME) {
       amountValue = `+${amountValue}`;
     }

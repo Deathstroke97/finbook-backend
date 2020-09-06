@@ -101,13 +101,11 @@ const Card = (props) => {
     user: { business },
   } = useContext(SessionContext);
   const businessCurrency = business.currency;
-  console.log("businessCurrency: ", businessCurrency);
-  console.log("business: ", business);
 
   const { projectId } = useParams();
 
   const getAmount = (amount, currency) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    let amountValue = parseFloat(amount).toLocaleString();
     let currencyPart;
     switch (currency) {
       case "USD":

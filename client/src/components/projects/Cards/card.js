@@ -110,7 +110,6 @@ const Card = (props) => {
   const businessCurrency = business.currency;
 
   const getAmount = (amount, currency, type) => {
-    let amountValue = parseFloat(amount).toFixed(2);
     let currencyPart;
     switch (currency) {
       case "USD":
@@ -129,7 +128,7 @@ const Card = (props) => {
     if (type === "fact") {
       result = (
         <p className={classes.fact}>
-          {amount.toFixed(2)}
+          {amount.toLocaleString()}
           &nbsp;
           {props.profitability && " %"}
           {!props.profitability && currencyPart}
@@ -140,9 +139,9 @@ const Card = (props) => {
     if (type === "plan") {
       result = (
         <p className={classes.plan}>
-          {`План: ${amount.toFixed(2)}`}
+          {`План: ${amount.toLocaleString()}`}
           &nbsp;
-          {props.profitability && " %"}
+          {props.profitability && "%"}
           {!props.profitability && currencyPart}
         </p>
       );

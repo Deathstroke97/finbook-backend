@@ -106,6 +106,7 @@ const PieGraph = (props) => {
       businessCurrency
     );
     const outcomeTransactions = getOutcomeTransactions(transactions);
+    console.log("outcomeTransactions: ", outcomeTransactions);
     let categories = {};
     let totalOutcome = 0;
     categories["Cтатья не указана"] = 0;

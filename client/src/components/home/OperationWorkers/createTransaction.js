@@ -35,11 +35,19 @@ import Contractor from "../../common/create/contractor";
 import Project from "../../common/create/project";
 import constants from "constants/constants";
 import { repeatedPeriods } from "constants/periods";
+import { filterCategoriesByType, splitByThree } from "utils/functions";
 
 const CreateOperation = (props) => {
   const classes = useStyles();
   const { user } = useContext(SessionContext);
-  const { accounts, projects, contractors, categories } = props;
+  const { accounts, projects, contractors } = props;
+  const { action } = props;
+
+  const filtered = filterCategoriesByType(props.categories);
+  const categories =
+    action === constants.OPERATION_INCOME
+      ? filtered.incomeCategories
+      : filtered.outcomeCategories;
   const { projectId, contractorId } = useParams();
 
   const [amount, setAmount] = useState("");
@@ -83,9 +91,17 @@ const CreateOperation = (props) => {
   };
 
   const handleAmountChange = (event) => {
-    const amount = event.target.value;
-    setAmount(String(event.target.value));
-    if (amount === "") {
+    const value = String(event.target.value);
+    const spaceRemoved = value.replace(/\s/g, "");
+    if (isNaN(spaceRemoved)) {
+      return;
+    }
+    if (spaceRemoved === "") {
+      setAmount("");
+    } else {
+      setAmount(parseFloat(spaceRemoved).toLocaleString());
+    }
+    if (spaceRemoved === "") {
       setRequiredFieldsState({
         ...requiredFieldsState,
         amount: false,
@@ -127,7 +143,7 @@ const CreateOperation = (props) => {
     }
 
     const transaction = {
-      amount,
+      amount: amount.replace(/\s/g, ""),
       account,
       project,
       category,
@@ -243,6 +259,8 @@ const CreateOperation = (props) => {
     return content;
   };
 
+  console.log("amount: ", amount);
+
   return (
     <div className={classes.root} role="presentation">
       <Box>
@@ -254,9 +272,9 @@ const CreateOperation = (props) => {
             error={requiredFieldsState["amount"] === false}
             value={amount}
             onChange={handleAmountChange}
-            id="outlined-number"
+            id="string-amount"
             label="Сумма"
-            type="number"
+            type="string"
             InputLabelProps={{
               shrink: true,
             }}

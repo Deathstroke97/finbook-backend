@@ -103,7 +103,7 @@ const options = {
         if (label) {
           label += ": ";
         }
-        label += parseFloat(tooltipItem.yLabel).toFixed(2);
+        label += parseFloat(tooltipItem.yLabel).toLocaleString();
         const businessCurrency = localStorage.getItem("businessCurrency");
         console.log("businessCurrency: ", businessCurrency);
         if (businessCurrency === "RUB") label += " рублей";

@@ -110,7 +110,11 @@ const Card = (props) => {
   };
 
   const getAmount = (amount, currency) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    let amountValue = parseFloat(amount).toLocaleString();
+    if (props.balance && +amount < 0) {
+      amountValue = parseFloat(amount) * -1;
+      amountValue = amountValue.toLocaleString();
+    }
     let currencyPart;
     switch (currency) {
       case "USD":

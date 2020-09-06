@@ -102,7 +102,7 @@ const SimpleTable = (props) => {
   } = props;
 
   const getAmount = (amount, currency, type) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    let amountValue = parseFloat(amount).toLocaleString();
 
     if (amount !== 0) {
       if (type === constants.OUTCOME) {
@@ -110,7 +110,7 @@ const SimpleTable = (props) => {
       }
       if (type === constants.BALANCE) {
         if (amount < 0) {
-          amountValue = `—${+amountValue * -1}`;
+          amountValue = `—${parseFloat(+amount * -1).toLocaleString()}`;
         }
       }
     }

@@ -44,7 +44,7 @@ const Obligation = (props) => {
 
   const [type, setType] = useState(constants.OBLIGATION_IN);
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("");
+  const [currency, setCurrency] = useState("KZT");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(moment());
   const [error, setError] = useState(null);
@@ -53,7 +53,7 @@ const Obligation = (props) => {
     const obligation = {
       contractor: contractorId,
       type,
-      amount,
+      amount: amount.replace(/\s/g, ""),
       currency,
       description,
       date,
@@ -84,22 +84,30 @@ const Obligation = (props) => {
     if (name == "description") {
       setDescription(value);
     }
-    if (name === "amount") {
-      setAmount(String(event.target.value));
-    }
+
     if (name === "currency") {
       setCurrency(value);
     }
   };
 
   const handleAmountChange = (event) => {
-    setAmount(String(event.target.value));
+    const value = event.target.value;
+    const spaceRemoved = value.replace(/\s/g, "");
+    if (isNaN(spaceRemoved)) {
+      return;
+    }
+    if (spaceRemoved === "") {
+      setAmount("");
+    } else {
+      setAmount(parseFloat(spaceRemoved).toLocaleString());
+    }
   };
 
   const handleDateChange = (value) => {
     const date = moment(value).format("YYYY-MM-DD");
     setDate(date);
   };
+  console.log("in obligation");
 
   return (
     <div className={classes.root}>
@@ -137,9 +145,9 @@ const Obligation = (props) => {
               required
               value={amount}
               onChange={handleAmountChange}
-              id="outlined-number"
+              id="string-amount"
               label="Сумма"
-              type="number"
+              type="string"
               InputLabelProps={{
                 shrink: true,
               }}
@@ -204,6 +212,7 @@ const Obligation = (props) => {
               color="primary"
               className={classes.button}
               onClick={handleObligationCreate}
+              disabled={!amount}
             >
               Добавить
             </Button>

@@ -32,16 +32,26 @@ import Contractor from "../../common/create/contractor";
 import Project from "../../common/create/project";
 import constants from "constants/constants";
 import { repeatedPeriods } from "constants/periods";
+import { filterCategoriesByType } from "utils/functions";
 
 const TransactionWorker = (props) => {
   const classes = useStyles();
-  const { accounts, projects, contractors, categories } = props;
+  const { accounts, projects, contractors } = props;
+  const { action } = props;
+  const filtered = filterCategoriesByType(props.categories);
+  const categories =
+    action === constants.OPERATION_INCOME
+      ? filtered.incomeCategories
+      : filtered.outcomeCategories;
+
   const { projectId, contractorId } = useParams();
   const { user } = useContext(SessionContext);
   const { transaction, filters } = props;
   const transactionId = transaction._id;
 
-  const [amount, setAmount] = useState(transaction.amount);
+  const [amount, setAmount] = useState(
+    parseFloat(transaction.amount).toLocaleString()
+  );
   const [account, setAccount] = useState(transaction.account._id);
   const [project, setProject] = useState(
     transaction.project ? transaction.project._id : null
@@ -97,9 +107,17 @@ const TransactionWorker = (props) => {
   };
 
   const handleAmountChange = (event) => {
-    const amount = event.target.value;
-    setAmount(String(event.target.value));
-    if (amount === "") {
+    const value = String(event.target.value);
+    const spaceRemoved = value.replace(/\s/g, "");
+    if (isNaN(spaceRemoved)) {
+      return;
+    }
+    if (spaceRemoved === "") {
+      setAmount("");
+    } else {
+      setAmount(parseFloat(spaceRemoved).toLocaleString());
+    }
+    if (spaceRemoved === "") {
       setRequiredFieldsState({
         ...requiredFieldsState,
         amount: false,
@@ -164,7 +182,7 @@ const TransactionWorker = (props) => {
       id: transactionId,
       date: moment(date).format("YYYY-MM-DD"),
       relatedDate: moment(relatedDate).format("YYYY-MM-DD"),
-      amount,
+      amount: amount.replace(/\s/g, ""),
       account,
       project,
       description,
@@ -227,8 +245,6 @@ const TransactionWorker = (props) => {
   };
 
   const generateHeader = () => {
-    const { action } = props;
-    console.log("action: u", action);
     let actionText = "";
     if (action === constants.OPERATION_INCOME) {
       actionText = "прихода";
@@ -269,9 +285,9 @@ const TransactionWorker = (props) => {
             error={requiredFieldsState["amount"] === false}
             value={amount}
             onChange={handleAmountChange}
-            id="outlined-number"
+            id="string-amount"
             label="Сумма"
-            type="number"
+            type="string"
             InputLabelProps={{
               shrink: true,
             }}

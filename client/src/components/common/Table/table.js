@@ -180,7 +180,8 @@ const EnhancedTable = (props) => {
   };
 
   const getAmount = (amount, currency, type) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    console.log("amount: ", amount);
+    let amountValue = parseFloat(amount).toLocaleString();
     if (type && type === constants.OPERATION_INCOME) {
       amountValue = `+${amountValue}`;
     }

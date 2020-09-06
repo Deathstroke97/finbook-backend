@@ -16,8 +16,21 @@ export const splitByThree = (value) => {
     index = index - 3;
     string = arr.join("");
   }
-  return string;
+  return string.trim();
 };
+
+// function splitByThree(value) {
+//   var string = String(value).split(".")[0];
+//     var index = string.length;
+//     while (index >= 3) {
+//       var arr = string.split("");
+//       arr.splice(index - 3, 0, " ");
+//       index = index - 3;
+//       string = arr.join("");
+//     }
+//     return string;
+
+//   }
 
 export const getAmountWithoutSign = (amount) => {
   // let isNegative = value > 0 ? false : true;

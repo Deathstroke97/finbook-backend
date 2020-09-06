@@ -44,7 +44,9 @@ const Obligation = (props) => {
   const obligationId = obligation._id;
   const disabled = obligation.transaction ? true : false;
   const [type, setType] = useState(obligation.type);
-  const [amount, setAmount] = useState(obligation.amount);
+  const [amount, setAmount] = useState(
+    parseFloat(obligation.amount).toLocaleString()
+  );
   const [currency, setCurrency] = useState(obligation.currency);
   const [description, setDescription] = useState(obligation.description);
   const [date, setDate] = useState(obligation.date);
@@ -53,7 +55,7 @@ const Obligation = (props) => {
   const handleObligationUpdate = (event) => {
     const obligation = {
       type,
-      amount,
+      amount: amount.replace(/\s/g, ""),
       currency,
       description,
       date,
@@ -90,15 +92,11 @@ const Obligation = (props) => {
 
   const handleChange = (event, name) => {
     const value = event.target.value;
-    console.log("value: ", value);
     if (name === "type") {
       setType(value);
     }
     if (name == "description") {
       setDescription(value);
-    }
-    if (name === "amount") {
-      setAmount(String(event.target.value));
     }
     if (name === "currency") {
       setCurrency(value);
@@ -106,7 +104,16 @@ const Obligation = (props) => {
   };
 
   const handleAmountChange = (event) => {
-    setAmount(String(event.target.value));
+    const value = String(event.target.value);
+    const spaceRemoved = value.replace(/\s/g, "");
+    if (isNaN(spaceRemoved)) {
+      return;
+    }
+    if (spaceRemoved === "") {
+      setAmount("");
+    } else {
+      setAmount(parseFloat(spaceRemoved).toLocaleString());
+    }
   };
 
   const handleDateChange = (value) => {
@@ -153,9 +160,9 @@ const Obligation = (props) => {
               required
               value={amount}
               onChange={handleAmountChange}
-              id="outlined-number"
+              id="string-amount"
               label="Сумма"
-              type="number"
+              type="string"
               InputLabelProps={{
                 shrink: true,
               }}
@@ -227,7 +234,7 @@ const Obligation = (props) => {
           <Box mt={1}>
             <Grid direction="row">
               <Button
-                disabled={disabled}
+                disabled={!amount ? true : disabled}
                 variant="contained"
                 color="primary"
                 className={classes.button}

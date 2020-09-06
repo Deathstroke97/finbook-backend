@@ -137,7 +137,7 @@ const EnhancedTable = (props) => {
   // };
 
   const getAmount = (amount, currency, type) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    let amountValue = parseFloat(amount).toLocaleString();
     let currencyPart;
     switch (currency) {
       case "USD":

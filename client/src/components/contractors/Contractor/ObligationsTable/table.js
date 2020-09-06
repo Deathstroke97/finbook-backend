@@ -57,6 +57,7 @@ const useStyles = makeStyles((theme) => ({
       // backgroundColor: theme.palette.background.default
     },
     "&:hover": {
+      cursor: "pointer",
       backgroundColor: "rgb(210, 235, 253) !important",
     },
   },
@@ -151,10 +152,7 @@ const EnhancedTable = (props) => {
   };
 
   const genCellText = (amount, type) => {
-    let arr = amount.split(".");
-    let integerPart = arr[0];
-    let decimalPart = arr[1];
-    let result = splitByThree(integerPart) + "." + decimalPart;
+    let result = parseFloat(amount).toLocaleString();
     return type === constants.OPERATION_INCOME ? `+${result}` : `-${result}`;
   };
 

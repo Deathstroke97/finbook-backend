@@ -17,25 +17,29 @@ const Project = (props) => {
   const classes = useStyles();
   // const history = useHistory();
 
-  const { editing } = props;
-  const { projectsFilters, filters } = props;
+  const { editing, projectsFilters } = props;
+  const { filters } = props;
   const { projectId } = useParams();
   const { user } = useContext(SessionContext);
 
-  const [project, setProject] = useState(props.project);
+  const [project, setProject] = useState({
+    ...props.project,
+    planIncome: parseFloat(props.project.planIncome).toLocaleString(),
+    planOutcome: parseFloat(props.project.planOutcome).toLocaleString(),
+  });
   const [error, setError] = useState(null);
   const [redirect, setRedirect] = useState(false);
 
   const handleProjectUpdate = (event) => {
-    const project = {
+    const updatedProject = {
       name: project.name,
       description: project.description,
-      planIncome: project.planIncome,
-      planOutcome: project.planOutcome,
+      planIncome: project.planIncome.replace(/\s/g, ""),
+      planOutcome: project.planOutcome.replace(/\s/g, ""),
       isFinished: project.isFinished,
     };
     axios
-      .put(`/project/${projectId}`, project)
+      .put(`/project/${projectId}`, updatedProject)
       .then((res) => {
         props.onFetchProject(user.token, projectId, filters);
         props.onFetchProjects(user.token, projectsFilters);
@@ -48,7 +52,25 @@ const Project = (props) => {
   };
 
   const handleChange = (event, name) => {
-    const value = event.target.value;
+    let value = event.target.value;
+    if (name === "planIncome" || name === "planOutcome") {
+      value = value.replace(/\s/g, "");
+      if (isNaN(value)) {
+        return;
+      } else if (value === "") {
+        setProject({
+          ...project,
+          [name]: "",
+        });
+      } else {
+        setProject({
+          ...project,
+          [name]: parseFloat(value).toLocaleString(),
+        });
+        return;
+      }
+    }
+
     const updatedProject = {
       ...project,
       [name]: value,

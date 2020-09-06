@@ -50,32 +50,33 @@ export default Object.freeze({
 
   currencies: [
     {
-      value: "RUB",
-      label: "RUB",
-    },
-    {
-      value: "EUR",
-      label: "EUR",
-    },
-    {
-      value: "USD",
-      label: "USD",
-    },
-    {
       value: "KZT",
       label: "KZT",
     },
-    {
-      value: "UAH",
-      label: "UAH",
-    },
-    {
-      value: "GBP",
-      label: "GBP",
-    },
-    {
-      value: "BYN",
-      label: "BYN",
-    },
+    // {
+    //   value: "RUB",
+    //   label: "RUB",
+    // },
+    // {
+    //   value: "EUR",
+    //   label: "EUR",
+    // },
+    // {
+    //   value: "USD",
+    //   label: "USD",
+    // },
+
+    // {
+    //   value: "UAH",
+    //   label: "UAH",
+    // },
+    // {
+    //   value: "GBP",
+    //   label: "GBP",
+    // },
+    // {
+    //   value: "BYN",
+    //   label: "BYN",
+    // },
   ],
 });

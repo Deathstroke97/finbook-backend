@@ -9,7 +9,7 @@
     "heroku-postbuild": "npm run install-client && npm run build",
     "start": "NODE_ENV=production node app.js",
     "client": "cd client && npm start",
-    "dev": "concurrently \"npm run start\" \"npm run client\""
+    "dev": "concurrently -c 'red, green' \"nodemon app.js\" \"npm run client\""
   },
   "author": "Azat Saparbekov",
   "license": "ISC",

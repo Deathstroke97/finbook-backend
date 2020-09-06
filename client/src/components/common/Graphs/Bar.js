@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import { Bar } from "react-chartjs-2";
 import { makeStyles } from "@material-ui/core";
@@ -7,6 +7,7 @@ import axios from "axios-instance";
 import constants from "constants/constants";
 import { connect } from "react-redux";
 import moment from "moment";
+import { SessionContext } from "context/SessionContext";
 
 const template = {
   labels: ["January", "February", "March", "April"],
@@ -61,6 +62,24 @@ const options = {
     fontColor: "rgb(44, 44, 44)",
     fontFamily: '"PT Sans", Tahoma, sans-serif',
   },
+  tooltips: {
+    callbacks: {
+      label: function (tooltipItem, data) {
+        if (data.datasets[tooltipItem.datasetIndex].label === "") return;
+        var label = data.datasets[tooltipItem.datasetIndex].label;
+
+        if (label) {
+          label += ": ";
+        }
+        label += parseFloat(tooltipItem.yLabel).toLocaleString();
+        const businessCurrency = localStorage.getItem("businessCurrency");
+        if (businessCurrency === "RUB") label += " рублей";
+        if (businessCurrency === "USD") label += " долларов";
+        if (businessCurrency === "KZT") label += " тенге";
+        return label;
+      },
+    },
+  },
 };
 
 const useStyles = makeStyles((theme) => ({
@@ -77,6 +96,9 @@ const useStyles = makeStyles((theme) => ({
 
 const BarGraph = (props) => {
   const classes = useStyles();
+  const {
+    user: { business },
+  } = useContext(SessionContext);
   const { projectId } = useParams();
   const { filters } = props;
   const [error, setError] = useState(null);
@@ -113,6 +135,10 @@ const BarGraph = (props) => {
 
   useEffect(() => {
     const fetchReportByProject = async () => {
+      if (filters.period === constants.ALL_TIME) {
+        filters.startTime = moment(business.createdAt);
+        filters.endTime = moment();
+      }
       try {
         const report = await axios.post("/report/cashflow", {
           reportBy: constants.PROJECT,

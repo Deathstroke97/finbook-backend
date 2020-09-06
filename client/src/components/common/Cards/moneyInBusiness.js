@@ -117,7 +117,8 @@ const MainCard = (props) => {
           <div className={classes.cardHeader}>
             <p className={classes.cardName}>Деньги бизнесa</p>
             <p className={classes.value}>
-              {total.toFixed(2)} {getCurrency(businessCurrency)}
+              {parseFloat(total).toLocaleString()}{" "}
+              {getCurrency(businessCurrency)}
             </p>
           </div>
         </div>
@@ -126,7 +127,7 @@ const MainCard = (props) => {
             if (index < 3) {
               return (
                 <p className={classes.detailedInfo} key={index}>
-                  {parseFloat(account.balance).toFixed(2)}{" "}
+                  {parseFloat(account.balance).toLocaleString()}{" "}
                   {getCurrency(account.currency)} на счету {` ${account.name}`}
                 </p>
               );

@@ -108,7 +108,7 @@ const SimpleTable = (props) => {
   } = props;
 
   const getAmount = (amount, currency, type) => {
-    let amountValue = parseFloat(amount).toFixed(2);
+    let amountValue = parseFloat(amount).toLocaleString();
 
     if (amount !== 0) {
       if (type === constants.OUTCOME) {
@@ -116,7 +116,7 @@ const SimpleTable = (props) => {
       }
       if (type === constants.BALANCE) {
         if (amount < 0) {
-          amountValue = `—${+amountValue * -1}`;
+          amountValue = `—${parseFloat(+amount * -1).toLocaleString()}`;
         }
       }
     }
@@ -145,6 +145,7 @@ const SimpleTable = (props) => {
   };
 
   const getAmountStyle = (value, type) => {
+    console.log("type: ", type);
     if (type === constants.BALANCE) {
       if (value > 0) {
         return clsx(classes.incomeStyle);
@@ -227,7 +228,7 @@ const SimpleTable = (props) => {
 
   const generateSeparateCategoriesReport = (categories) => {
     const categoriesBody = categories.map(({ name, periods }) => {
-      return generateRows(periods, name, true, constants.OPERATION_OUTCOME);
+      return generateRows(periods, name, true, constants.OUTCOME);
     });
     return categoriesBody;
   };
@@ -348,7 +349,7 @@ const SimpleTable = (props) => {
             incomes.withoutProjects,
             "Косвенная выручка",
             true,
-            constants.PROJECT
+            constants.INCOME
           )}
           {generateInnerRows(
             incomes.withoutProjects.projects,
@@ -359,7 +360,7 @@ const SimpleTable = (props) => {
             outcomes.withProjects,
             "Расходы по проектам",
             true,
-            constants.PROJECT
+            constants.OUTCOME
           )}
           {generateInnerRows(
             outcomes.withProjects.projects,

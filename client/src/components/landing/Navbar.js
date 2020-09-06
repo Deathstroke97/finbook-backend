@@ -184,7 +184,7 @@ const Navbar = (props) => {
             <TextField
               margin="dense"
               id="name"
-              label="Ваше иия"
+              label="Ваше имя"
               fullWidth
               value={name}
               onChange={(e) => handleChange(e, "name")}
